@@ -1,9 +1,14 @@
 from fastapi import FastAPI
 
-from src.database import db_startup, db_shutdown
+from . import auth
+from .database import db_startup, db_shutdown
 
 app = FastAPI(
     title='event_manager'
+)
+
+app.include_router(
+    auth.users_router
 )
 
 
