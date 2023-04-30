@@ -7,7 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
-from src.auth.models import User  # type: ignore
+from src.users.models import User, RefreshToken  # type: ignore
 from src.config import DATABASE_URL
 
 # this is the Alembic Config object, which provides

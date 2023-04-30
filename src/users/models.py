@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import validator
 from sqlmodel import SQLModel, Field
 
-from src.auth.utils import get_random_string, hash_password
+from src.users.utils import get_random_string, hash_password
 
 
 class UserBase(SQLModel):
@@ -62,3 +62,10 @@ class UserCreate(UserBase):
         salt = get_random_string()
         hashed_password = hash_password(value, salt)
         return f'{salt}${hashed_password}'
+
+
+class RefreshToken(SQLModel, table=True):
+    """The model that represents the refresh token"""
+
+    user_id: int = Field(primary_key=True, foreign_key='user.id')
+    token: str = Field(primary_key=True)
