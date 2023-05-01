@@ -1,7 +1,7 @@
 import re
 from typing import Optional
 
-from pydantic import validator
+from pydantic import validator, EmailStr
 from sqlmodel import SQLModel, Field
 
 from src.users.utils import get_random_string, hash_password
@@ -13,7 +13,7 @@ class UserBase(SQLModel):
     first_name: str
     last_name: str
     patronymic: str
-    email: str = Field(unique=True)
+    email: EmailStr = Field(unique=True)
 
 
 class User(UserBase, table=True):
@@ -47,13 +47,6 @@ class UserCreate(UserBase):
             raise ValueError('incorrect value')
         return value.lower().capitalize()
 
-    @validator('email')
-    def validate_email(cls, value: str) -> str:
-        if re.fullmatch(r'[_A-Za-z0-9-\+]+(\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+'
-                        r'(\.[A-Za-z0-9]+)*(\.[A-Za-z]{2,})', value) is None:
-            raise ValueError('incorrect value')
-        return value
-
     @validator('password')
     def validate_password(cls, value: str) -> str:
         if re.fullmatch(r'(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])[0-9a-zA-Z!@#$%^&*]{6,}', value) is None:
@@ -68,4 +61,11 @@ class RefreshToken(SQLModel, table=True):
     """The model that represents the refresh token"""
 
     user_id: int = Field(primary_key=True, foreign_key='user.id')
-    token: str = Field(primary_key=True)
+    value: str = Field(primary_key=True)
+
+
+class TokensResponseModel(SQLModel):
+    """The models that represents the schema of the response with tokens"""
+
+    access_token: str
+    refresh_token: str

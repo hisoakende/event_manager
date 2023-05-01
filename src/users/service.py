@@ -1,7 +1,7 @@
 from typing import Optional
 
 from fastapi_jwt_auth import AuthJWT
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.exc import IntegrityError
 
 from src import database
@@ -38,7 +38,16 @@ async def get_user_by_email(email: str) -> Optional[User]:
 
 
 async def save_refresh_token(token: RefreshToken) -> None:
-    """The function that saves the refresh token in database"""
+    """The function that saves the refresh token in the database"""
 
     async with database.Session() as session, session.begin():
         session.add(token)
+
+
+async def delete_refresh_token(token: RefreshToken) -> None:
+    """The function that deletes the given refresh token from the database"""
+
+    async with database.Session() as session, session.begin():
+        query = delete(RefreshToken).where(RefreshToken.user_id == token.user_id,
+                                           RefreshToken.value == token.value)
+        await session.execute(query)

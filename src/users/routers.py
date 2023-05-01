@@ -1,11 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Body, Depends, status
+from fastapi import APIRouter, HTTPException, Body, Depends, status, Header
 from fastapi_jwt_auth import AuthJWT
 
 from src.users import config
-from src.users.models import UserCreate, User, UserRead, RefreshToken
-from src.users.service import save_user, get_user_by_email, save_refresh_token
+from src.users.models import UserCreate, User, UserRead, RefreshToken, TokensResponseModel
+from src.users.service import save_user, get_user_by_email, save_refresh_token, delete_refresh_token
 from src.users.utils import verify_password
 
 users_router = APIRouter(
@@ -39,7 +39,7 @@ async def create_user(user_create: UserCreate) -> UserRead:
 @auth_router.post('/login')
 async def login(email: Annotated[str, Body()],
                 password: Annotated[str, Body()],
-                Authorize: Annotated[AuthJWT, Depends()]) -> dict[str, str]:
+                Authorize: Annotated[AuthJWT, Depends()]) -> TokensResponseModel:
     """The view that processes login and returns access and refresh token"""
 
     user = await get_user_by_email(email)
@@ -57,6 +57,19 @@ async def login(email: Annotated[str, Body()],
         user.id, user_claims={'is_government_worker': user.is_government_worker}
     )
     refresh_token = Authorize.create_refresh_token(user.id)
-    await save_refresh_token(RefreshToken(user_id=user.id, token=refresh_token))
+    await save_refresh_token(RefreshToken(user_id=user.id, value=refresh_token))
 
-    return {'access_token': access_token, 'refresh_token': refresh_token}
+    return TokensResponseModel.parse_obj({'access_token': access_token, 'refresh_token': refresh_token})
+
+
+@auth_router.post('/logout', status_code=status.HTTP_204_NO_CONTENT)
+async def logout(authorization: Annotated[str | None, Header()],
+                 Authorize: Annotated[AuthJWT, Depends()]) -> None:
+    """The view that processes logout user"""
+
+    Authorize.jwt_refresh_token_required()
+
+    _, token_value = authorization.split()
+    user_id = Authorize.get_jwt_subject()
+    token = RefreshToken(user_id=user_id, value=token_value)
+    await delete_refresh_token(token)
