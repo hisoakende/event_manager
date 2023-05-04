@@ -1,4 +1,4 @@
-"""fixed inccorrect mig generation
+"""fixed incorrect mig generation
 
 Revision ID: 88b145ec7d0b
 Revises: 03dcb6b1f51c

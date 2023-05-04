@@ -12,7 +12,7 @@ def db_startup() -> None:
 
     global engine, Session
     engine = create_async_engine(DATABASE_URL, echo=True)
-    Session = sessionmaker(engine, class_=AsyncSession)
+    Session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 async def db_shutdown() -> None:

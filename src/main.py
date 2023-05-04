@@ -3,7 +3,8 @@ from fastapi.responses import JSONResponse
 from fastapi_jwt_auth.exceptions import AuthJWTException
 
 from src.database import db_startup, db_shutdown
-from src.users import users_router, auth_router
+from src.users import users_router
+from src.auth import auth_router
 
 app = FastAPI(
     title='event_manager'

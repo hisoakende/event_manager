@@ -44,28 +44,14 @@ class UserCreate(UserBase):
     @validator('first_name', 'last_name', 'patronymic')
     def validate_full_name(cls, value: str) -> str:
         if re.fullmatch(r'[а-яА-ЯёЁ]{1,35}', value) is None:
-            raise ValueError('incorrect value')
+            raise ValueError('invalid value')
         return value.lower().capitalize()
 
     @validator('password')
     def validate_password(cls, value: str) -> str:
         if re.fullmatch(r'(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])[0-9a-zA-Z!@#$%^&*]{6,}', value) is None:
-            raise ValueError('incorrect value')
+            raise ValueError('invalid value')
 
         salt = get_random_string()
         hashed_password = hash_password(value, salt)
         return f'{salt}${hashed_password}'
-
-
-class RefreshToken(SQLModel, table=True):
-    """The model that represents the refresh token"""
-
-    user_id: int = Field(primary_key=True, foreign_key='user.id')
-    value: str = Field(primary_key=True)
-
-
-class TokensResponseModel(SQLModel):
-    """The models that represents the schema of the response with tokens"""
-
-    access_token: str
-    refresh_token: str
