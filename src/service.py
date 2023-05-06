@@ -28,6 +28,7 @@ async def create_model(model: SQLModelSubClass) -> bool:
         try:
             await session.commit()
         except IntegrityError:
+
             return False
 
     return True
@@ -48,6 +49,7 @@ async def update_model(model_type: type[SQLModelSubClass], data: SQLModel, *cond
         await execute_db_query(query)
     except IntegrityError:
         return False
+
     return True
 
 
@@ -58,7 +60,7 @@ async def delete_model(model_type: type[SQLModelSubClass], *conditions: BinaryEx
     await execute_db_query(query)
 
 
-def is_user_in_black_list(user_id: int) -> bool:
+def is_user_in_blacklist(user_id: int) -> bool:
     """The function that checks if the user is blacklisted"""
 
     return redis_engine.sismember(config.USERS_BLACKLIST_NAME, user_id)
