@@ -15,11 +15,6 @@ def authorize_user(is_government_worker: bool = False,
 
     async def wrapper(Authorize: Annotated[AuthJWT, Depends()]) -> int:
         user_id = Authorize.get_jwt_subject()
-        if is_user_in_black_list(user_id):
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                                detail=[{'loc': ['headers', 'token'],
-                                         'msg': 'invalid token',
-                                         'type': 'value_error'}])
         if refresh_token:
             Authorize.jwt_refresh_token_required()
 
@@ -32,13 +27,18 @@ def authorize_user(is_government_worker: bool = False,
         else:
             Authorize.jwt_required()
 
+        if is_user_in_black_list(user_id):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail=[{'loc': ['headers', 'token'],
+                                         'msg': 'invalid token',
+                                         'type': 'value_error'}])
+
         user_is_government_worker = Authorize.get_raw_jwt()['is_government_worker']
         if is_government_worker and not user_is_government_worker:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail=[{'loc': ['headers', 'token'],
                                          'msg': 'you do not have rights to this resource',
                                          'type': 'value_error'}])
-
         return user_id
 
     return wrapper

@@ -1,6 +1,6 @@
-from typing import Any
+from typing import Any, TypeVar
 
-from sqlalchemy import update
+from sqlalchemy import select, update, delete
 from sqlalchemy.engine import Result
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.elements import BinaryExpression
@@ -17,15 +17,45 @@ async def execute_db_query(query: Any) -> Result:
         return await session.execute(query)
 
 
-async def update_model(model_type: type[SQLModel], data: SQLModel, condition: BinaryExpression) -> bool:
+SQLModelSubClass = TypeVar('SQLModelSubClass', bound=SQLModel)
+
+
+async def create_model(model: SQLModelSubClass) -> bool:
+    """The function that creates model"""
+
+    async with database.Session() as session:
+        session.add(model)
+        try:
+            await session.commit()
+        except IntegrityError:
+            return False
+
+    return True
+
+
+async def receive_model(model_type: type[SQLModelSubClass], *conditions: BinaryExpression) -> SQLModelSubClass | None:
+    """The function that returns the model by id from the database"""
+
+    query = select(model_type).where(*conditions)
+    return (await execute_db_query(query)).scalar()
+
+
+async def update_model(model_type: type[SQLModelSubClass], data: SQLModel, *conditions: BinaryExpression) -> bool:
     """The function that updates model"""
 
-    query = update(model_type).values(data.dict(exclude_none=True)).where(condition)
+    query = update(model_type).values(data.dict(exclude_none=True)).where(*conditions)
     try:
         await execute_db_query(query)
     except IntegrityError:
         return False
     return True
+
+
+async def delete_model(model_type: type[SQLModelSubClass], *conditions: BinaryExpression) -> None:
+    """The function that deletes the model from the database"""
+
+    query = delete(model_type).where(*conditions)
+    await execute_db_query(query)
 
 
 def is_user_in_black_list(user_id: int) -> bool:
