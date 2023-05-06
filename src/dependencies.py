@@ -6,6 +6,7 @@ from fastapi_jwt_auth import AuthJWT
 
 from src.auth.models import RefreshToken
 from src.auth.service import does_refresh_token_exist
+from src.service import is_user_in_black_list
 
 
 def authorize_user(is_government_worker: bool = False,
@@ -14,6 +15,11 @@ def authorize_user(is_government_worker: bool = False,
 
     async def wrapper(Authorize: Annotated[AuthJWT, Depends()]) -> int:
         user_id = Authorize.get_jwt_subject()
+        if is_user_in_black_list(user_id):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                detail=[{'loc': ['headers', 'token'],
+                                         'msg': 'invalid token',
+                                         'type': 'value_error'}])
         if refresh_token:
             Authorize.jwt_refresh_token_required()
 

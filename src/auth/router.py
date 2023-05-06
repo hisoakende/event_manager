@@ -50,9 +50,9 @@ async def logout(user_id: Annotated[int, Depends(authorize_user(refresh_token=Tr
 
 
 @auth_router.post('/refresh')
-async def refresh_access_token(user_id: Annotated[int, Depends(authorize_user(refresh_token=True))],
-                               Authorize: Annotated[AuthJWT, Depends()]) -> TokensResponseModel:
-    """The view that processes refreshing expired access token"""
+async def update_access_token(user_id: Annotated[int, Depends(authorize_user(refresh_token=True))],
+                              Authorize: Annotated[AuthJWT, Depends()]) -> TokensResponseModel:
+    """The view that processes updating expired access token"""
 
     user_is_government_worker = Authorize.get_raw_jwt()['is_government_worker']
     new_access_token, new_refresh_token = create_tokens_values(Authorize, user_id, user_is_government_worker)

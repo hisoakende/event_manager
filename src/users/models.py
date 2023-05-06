@@ -1,5 +1,4 @@
 import re
-from typing import Optional
 
 from pydantic import validator, EmailStr
 from sqlmodel import SQLModel, Field
@@ -16,38 +15,21 @@ class UserBase(SQLModel):
     email: EmailStr = Field(unique=True)
 
 
-class User(UserBase, table=True):
-    """The model that represents an ordinary citizen or a government worker in the database"""
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    password: str
-    is_government_worker: bool = False
-
-
-class UserRead(UserBase):
-    """That model that represents the fields which will be returned by API"""
-
-    id: int
-    is_government_worker: bool
-
-
-class UserCreate(UserBase):
-    """
-    The model that represents the fields needed to create the user from a post request and processes its
-
-    The 'government_key' field needed to create a government worker
-    """
+class UserBaseWithPassword(UserBase):
+    """The model that represents basic user structure fields and the password field"""
 
     password: str
-    government_key: str | None = None
 
-    @validator('first_name', 'last_name', 'patronymic')
+
+class UserValidator(SQLModel):
+
+    @validator('first_name', 'last_name', 'patronymic', check_fields=False)
     def validate_full_name(cls, value: str) -> str:
         if re.fullmatch(r'[а-яА-ЯёЁ]{1,35}', value) is None:
             raise ValueError('invalid value')
         return value.lower().capitalize()
 
-    @validator('password')
+    @validator('password', check_fields=False)
     def validate_password(cls, value: str) -> str:
         if re.fullmatch(r'(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])[0-9a-zA-Z!@#$%^&*]{6,}', value) is None:
             raise ValueError('invalid value')
@@ -55,3 +37,33 @@ class UserCreate(UserBase):
         salt = get_random_string()
         hashed_password = hash_password(value, salt)
         return f'{salt}${hashed_password}'
+
+
+class User(UserBaseWithPassword, table=True):
+    """The model that represents an ordinary citizen or a government worker in the database"""
+
+    id: int | None = Field(default=None, primary_key=True)
+    is_government_worker: bool = False
+
+
+class UserRead(UserBase):
+    """That model that represents the fields which will be returned by API"""
+
+    is_government_worker: bool
+
+
+class UserCreate(UserBaseWithPassword, UserValidator):
+    """
+    The model that represents the fields needed to create the user and processes its
+
+    The 'government_key' field needed to create a government worker
+    """
+
+    government_key: str | None = None
+
+
+class UserChange(UserBaseWithPassword, UserValidator):
+    """The model that represents the fields needed to change the user """
+
+    __annotations__ = {k: v | None for k, v in
+                       (UserBase.__annotations__ | UserBaseWithPassword.__annotations__).items()}

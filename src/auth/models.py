@@ -1,10 +1,11 @@
+from sqlalchemy import ForeignKey, Column, Integer
 from sqlmodel import SQLModel, Field
 
 
 class RefreshToken(SQLModel, table=True):
     """The model that represents the refresh token"""
 
-    user_id: int = Field(primary_key=True, foreign_key='user.id')
+    user_id: int = Field(sa_column=Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), primary_key=True))
     value: str = Field(primary_key=True)
 
 
