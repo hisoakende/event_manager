@@ -28,7 +28,6 @@ async def create_model(model: SQLModelSubClass) -> bool:
         try:
             await session.commit()
         except IntegrityError:
-
             return False
 
     return True

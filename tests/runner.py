@@ -8,11 +8,12 @@ import src.auth.models
 import src.config
 import src.users.models
 from tests import config
-from tests.config import TEST_USERS_BLACKLIST_NAME
+from tests.config import TEST_USERS_BLACKLIST_NAME, TEST_DATABASE_URL
 
 
 async def set_up() -> None:
     src.config.USERS_BLACKLIST_NAME = TEST_USERS_BLACKLIST_NAME
+    src.config.DATABASE_URL = TEST_DATABASE_URL
 
     engine = create_async_engine(config.TEST_DATABASE_URL)
 
