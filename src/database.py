@@ -11,7 +11,7 @@ def db_startup() -> None:
     """The function that processes the start of the database interaction"""
 
     global engine, Session
-    engine = create_async_engine(config.DATABASE_URL, echo=True)
+    engine = create_async_engine(config.DATABASE_URL)
     Session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
