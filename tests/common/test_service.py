@@ -3,7 +3,7 @@ from sqlalchemy import insert, select, text
 from src import database
 from src.redis_ import redis_engine
 from src.service import execute_db_query, create_model, receive_model, update_model, delete_model, is_user_in_blacklist
-from src.users.models import User, UserChange
+from src.users.models import User, UserUpdate
 from tests import config
 from tests.service import DBProcessedIsolatedAsyncTestCase
 
@@ -73,7 +73,7 @@ class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
                                                       password='Example123'))
 
         expected_result = True
-        result = await update_model(User, UserChange(first_name='Измененноеимя'), User.id == 5000)  # type: ignore
+        result = await update_model(User, UserUpdate(first_name='Измененноеимя'), User.id == 5000)  # type: ignore
         self.assertEqual(result, expected_result)
 
         expected_name = 'Измененноеимя'
@@ -91,7 +91,7 @@ class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
                                                       password='Example123'))
 
         expected_result = False
-        result = await update_model(User, UserChange(email='example@example3.com'))
+        result = await update_model(User, UserUpdate(email='example@example3.com'))
         self.assertEqual(result, expected_result)
 
         expected_email = 'example@example4.com'

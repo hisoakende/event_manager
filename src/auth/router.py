@@ -16,8 +16,10 @@ auth_router = APIRouter(
     tags=['auth']
 )
 
+AuthorizeUserRefreshDep = Annotated[int, Depends(authorize_user(refresh_token=True))]
 
-@auth_router.post('/login')
+
+@auth_router.post('/login/')
 async def login(email: Annotated[str, Body()],
                 password: Annotated[str, Body()],
                 Authorize: Annotated[AuthJWT, Depends()]) -> TokensResponseModel:
@@ -41,8 +43,8 @@ async def login(email: Annotated[str, Body()],
     return TokensResponseModel.parse_obj({'access_token': access_token, 'refresh_token': refresh_token})
 
 
-@auth_router.post('/logout', status_code=status.HTTP_204_NO_CONTENT)
-async def logout(user_id: Annotated[int, Depends(authorize_user(refresh_token=True))],
+@auth_router.post('/logout/', status_code=status.HTTP_204_NO_CONTENT)
+async def logout(user_id: AuthorizeUserRefreshDep,
                  Authorize: Annotated[AuthJWT, Depends()]) -> None:
     """The view that processes logout user"""
 
@@ -50,8 +52,8 @@ async def logout(user_id: Annotated[int, Depends(authorize_user(refresh_token=Tr
                        RefreshToken.value == Authorize._token)
 
 
-@auth_router.post('/refresh')
-async def update_access_token(user_id: Annotated[int, Depends(authorize_user(refresh_token=True))],
+@auth_router.post('/refresh/')
+async def update_access_token(user_id: AuthorizeUserRefreshDep,
                               Authorize: Annotated[AuthJWT, Depends()]) -> TokensResponseModel:
     """The view that processes updating expired access token"""
 

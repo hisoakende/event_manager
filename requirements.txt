@@ -31,4 +31,5 @@ starlette==0.26.1
 tomli==2.0.1
 types-pyOpenSSL==23.1.0.2
 typing_extensions==4.5.0
+uuid==1.30
 uvicorn==0.21.1

@@ -27,6 +27,7 @@ class UserValidator(SQLModel):
     def validate_full_name(cls, value: str) -> str:
         if re.fullmatch(r'[а-яА-ЯёЁ]{1,35}', value) is None:
             raise ValueError('invalid value')
+
         return value.lower().capitalize()
 
     @validator('password', check_fields=False)
@@ -46,12 +47,6 @@ class User(UserBaseWithPassword, table=True):
     is_government_worker: bool = False
 
 
-class UserRead(UserBase):
-    """That model that represents the fields which will be returned by API"""
-
-    is_government_worker: bool
-
-
 class UserCreate(UserBaseWithPassword, UserValidator):
     """
     The model that represents the fields needed to create the user and processes its
@@ -62,8 +57,14 @@ class UserCreate(UserBaseWithPassword, UserValidator):
     government_key: str | None = None
 
 
-class UserChange(UserBaseWithPassword, UserValidator):
-    """The model that represents the fields needed to change the user """
+class UserRead(UserBase):
+    """That model that represents the fields which will be returned by API"""
+
+    is_government_worker: bool
+
+
+class UserUpdate(UserBaseWithPassword, UserValidator):
+    """The model that represents the fields needed to change the user"""
 
     __annotations__ = {k: v | None for k, v in
                        (UserBase.__annotations__ | UserBaseWithPassword.__annotations__).items()}

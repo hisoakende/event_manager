@@ -33,6 +33,13 @@ async def create_model(model: SQLModelSubClass) -> bool:
     return True
 
 
+async def receive_models(model_type: type[SQLModelSubClass]) -> list[SQLModelSubClass]:
+    """The function that returns all models of the given model type"""
+
+    query = select(model_type)
+    return (await execute_db_query(query)).scalars().fetchall()
+
+
 async def receive_model(model_type: type[SQLModelSubClass], *conditions: BinaryExpression) -> SQLModelSubClass | None:
     """The function that returns the model by id from the database"""
 

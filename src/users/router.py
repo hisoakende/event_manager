@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from src.dependencies import authorize_user
 from src.service import update_model, delete_model, create_model, receive_model
 from src.users import config
-from src.users.models import UserCreate, User, UserRead, UserChange
+from src.users.models import UserCreate, User, UserRead, UserUpdate
 from src.users.service import add_user_to_blacklist
 
 users_router = APIRouter(
@@ -13,10 +13,12 @@ users_router = APIRouter(
     tags=['users']
 )
 
+AuthorizeUserDep = Annotated[int, Depends(authorize_user())]
+
 
 @users_router.post('/', status_code=status.HTTP_201_CREATED)
 async def create_user(user_create: UserCreate) -> UserRead:
-    """The view that processes user creation (registration)"""
+    """The view that processes creation the user (registration)"""
 
     user = User.from_orm(user_create)
     if user_create.government_key and user_create.government_key == config.GOVERNMENT_KEY:
@@ -31,17 +33,17 @@ async def create_user(user_create: UserCreate) -> UserRead:
     return UserRead.from_orm(user)
 
 
-@users_router.get('/self')
-async def receive_user(user_id: Annotated[int, Depends(authorize_user())]) -> UserRead:
-    """The view that processes user getting"""
+@users_router.get('/self/')
+async def receive_user(user_id: AuthorizeUserDep) -> UserRead:
+    """The view that processes getting the user"""
 
     user = await receive_model(User, User.id == user_id)  # type: ignore
     return UserRead.from_orm(user)
 
 
-@users_router.patch('/self')
-async def change_user(user_changes: UserChange, user_id: Annotated[int, Depends(authorize_user())]) -> UserRead:
-    """The view that processes user changing"""
+@users_router.patch('/self/')
+async def change_user(user_changes: UserUpdate, user_id: AuthorizeUserDep) -> UserRead:
+    """The view that processes changing the user"""
 
     is_updated = await update_model(User, user_changes, User.id == user_id)  # type: ignore
     if not is_updated:
@@ -53,9 +55,9 @@ async def change_user(user_changes: UserChange, user_id: Annotated[int, Depends(
     return UserRead.from_orm(await receive_model(User, User.id == user_id))  # type: ignore
 
 
-@users_router.delete('/self', status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: Annotated[int, Depends(authorize_user())]) -> None:
-    """The view that processes user deleting"""
+@users_router.delete('/self/', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(user_id: AuthorizeUserDep) -> None:
+    """The view that processes deleting the user"""
 
     await delete_model(User, User.id == user_id)  # type: ignore
     add_user_to_blacklist(user_id)
