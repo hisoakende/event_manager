@@ -5,6 +5,8 @@ from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import TEXT
 from sqlmodel import SQLModel, Field
 
+from src.utils import ChangesAreNotEmptyMixin
+
 
 class GovStructureBase(SQLModel):
     """The model that represents basic government structure fields"""
@@ -28,7 +30,7 @@ class GovStructureCreate(GovStructureBase):
     """The model that represents the fields needed to create the government structure"""
 
 
-class GovStructureUpdate(GovStructureBase):
+class GovStructureUpdate(GovStructureBase, ChangesAreNotEmptyMixin):
     """The model that represents the fields needed to change the government structure"""
 
     name: str | None

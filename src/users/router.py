@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, status, Depends
 
 from src.dependencies import authorize_user
-from src.service import update_model, delete_model, create_model, receive_model
+from src.service import update_models, delete_models, create_model, receive_model
 from src.users import config
 from src.users.models import UserCreate, User, UserRead, UserUpdate
 from src.users.service import add_user_to_blacklist
@@ -42,10 +42,10 @@ async def receive_user(user_id: AuthorizeUserDep) -> UserRead:
 
 
 @users_router.patch('/self/')
-async def change_user(user_changes: UserUpdate, user_id: AuthorizeUserDep) -> UserRead:
-    """The view that processes changing the user"""
+async def update_user(user_changes: UserUpdate, user_id: AuthorizeUserDep) -> UserRead:
+    """The view that processes updating the user"""
 
-    is_updated = await update_model(User, user_changes, User.id == user_id)  # type: ignore
+    is_updated = await update_models(User, user_changes, User.id == user_id)  # type: ignore
     if not is_updated:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                             detail=[{'loc': ['body', 'email'],
@@ -59,5 +59,5 @@ async def change_user(user_changes: UserUpdate, user_id: AuthorizeUserDep) -> Us
 async def delete_user(user_id: AuthorizeUserDep) -> None:
     """The view that processes deleting the user"""
 
-    await delete_model(User, User.id == user_id)  # type: ignore
+    await delete_models(User, User.id == user_id)  # type: ignore
     add_user_to_blacklist(user_id)

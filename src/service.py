@@ -47,23 +47,26 @@ async def receive_model(model_type: type[SQLModelSubClass], *conditions: BinaryE
     return (await execute_db_query(query)).scalar()
 
 
-async def update_model(model_type: type[SQLModelSubClass], data: SQLModel, *conditions: BinaryExpression) -> bool:
-    """The function that updates model"""
+async def update_models(model_type: type[SQLModelSubClass], data: SQLModel,
+                        *conditions: BinaryExpression) -> int | None:
+    """
+    The function that updates models and returns the number of updated rows
+    if the update is successful, otherwise None
+    """
 
     query = update(model_type).values(data.dict(exclude_none=True)).where(*conditions)
     try:
-        await execute_db_query(query)
+        return (await execute_db_query(query)).rowcount
     except IntegrityError:
-        return False
-
-    return True
+        return None
 
 
-async def delete_model(model_type: type[SQLModelSubClass], *conditions: BinaryExpression) -> None:
-    """The function that deletes the model from the database"""
+async def delete_models(model_type: type[SQLModelSubClass], *conditions: BinaryExpression) -> int:
+    """The function that deletes models from the database and returns the number of deleted rows"""
 
     query = delete(model_type).where(*conditions)
-    await execute_db_query(query)
+    row_count = (await execute_db_query(query)).rowcount
+    return row_count
 
 
 def is_user_in_blacklist(user_id: int) -> bool:

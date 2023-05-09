@@ -4,6 +4,7 @@ from pydantic import validator, EmailStr
 from sqlmodel import SQLModel, Field
 
 from src.users.utils import get_random_string, hash_password
+from src.utils import ChangesAreNotEmptyMixin
 
 
 class UserBase(SQLModel):
@@ -63,7 +64,7 @@ class UserRead(UserBase):
     is_government_worker: bool
 
 
-class UserUpdate(UserBaseWithPassword, UserValidator):
+class UserUpdate(UserBaseWithPassword, UserValidator, ChangesAreNotEmptyMixin):
     """The model that represents the fields needed to change the user"""
 
     __annotations__ = {k: v | None for k, v in

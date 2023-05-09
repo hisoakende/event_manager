@@ -2,7 +2,7 @@ from sqlalchemy import insert, select, text
 
 from src import database
 from src.redis_ import redis_engine
-from src.service import execute_db_query, create_model, receive_model, update_model, delete_model, is_user_in_blacklist
+from src.service import execute_db_query, create_model, receive_model, update_models, delete_models, is_user_in_blacklist
 from src.users.models import User, UserUpdate
 from tests import config
 from tests.service import DBProcessedIsolatedAsyncTestCase
@@ -72,8 +72,8 @@ class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
                                                       patronymic='Отчество', email='example@example3.com',
                                                       password='Example123'))
 
-        expected_result = True
-        result = await update_model(User, UserUpdate(first_name='Измененноеимя'), User.id == 5000)  # type: ignore
+        expected_result = 1
+        result = await update_models(User, UserUpdate(first_name='Измененноеимя'), User.id == 5000)  # type: ignore
         self.assertEqual(result, expected_result)
 
         expected_name = 'Измененноеимя'
@@ -90,8 +90,8 @@ class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
                                                       patronymic='Отчество', email='example@example4.com',
                                                       password='Example123'))
 
-        expected_result = False
-        result = await update_model(User, UserUpdate(email='example@example3.com'))
+        expected_result = None
+        result = await update_models(User, UserUpdate(email='example@example3.com'))
         self.assertEqual(result, expected_result)
 
         expected_email = 'example@example4.com'
@@ -107,7 +107,9 @@ class TestDeleteModel(DBProcessedIsolatedAsyncTestCase):
             await session.execute(insert(User).values(id=7000, first_name='Имя', last_name='Фамилия',
                                                       patronymic='Отчество', email='example@example5.com',
                                                       password='Example123'))
-        await delete_model(User, User.id == 7000)  # type: ignore
+        expected_result = 1
+        result = await delete_models(User, User.id == 7000)  # type: ignore
+        self.assertEqual(result, expected_result)
 
         async with database.Session() as session:
             result = await session.scalar(select(User).where(User.id == 7000))

@@ -7,7 +7,7 @@ from starlette import status
 from src.auth.models import TokensResponseModel, RefreshToken
 from src.auth.service import create_tokens_values
 from src.dependencies import authorize_user
-from src.service import delete_model, update_model, create_model, receive_model
+from src.service import delete_models, update_models, create_model, receive_model
 from src.users.models import User
 from src.users.utils import verify_password
 
@@ -48,8 +48,8 @@ async def logout(user_id: AuthorizeUserRefreshDep,
                  Authorize: Annotated[AuthJWT, Depends()]) -> None:
     """The view that processes logout user"""
 
-    await delete_model(RefreshToken, RefreshToken.user_id == user_id,  # type: ignore
-                       RefreshToken.value == Authorize._token)
+    await delete_models(RefreshToken, RefreshToken.user_id == user_id,  # type: ignore
+                        RefreshToken.value == Authorize._token)
 
 
 @auth_router.post('/refresh/')
@@ -60,7 +60,7 @@ async def update_access_token(user_id: AuthorizeUserRefreshDep,
     user_is_government_worker = Authorize.get_raw_jwt()['is_government_worker']
     new_access_token, new_refresh_token = create_tokens_values(Authorize, user_id, user_is_government_worker)
     token = RefreshToken(user_id=user_id, value=new_refresh_token)
-    await update_model(RefreshToken, token, RefreshToken.user_id == user_id,  # type: ignore
-                       RefreshToken.value == Authorize._token)
+    await update_models(RefreshToken, token, RefreshToken.user_id == user_id,  # type: ignore
+                        RefreshToken.value == Authorize._token)
 
     return TokensResponseModel.parse_obj({'access_token': new_access_token, 'refresh_token': new_refresh_token})
