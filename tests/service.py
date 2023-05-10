@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import Mock
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession

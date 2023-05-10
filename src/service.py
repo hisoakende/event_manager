@@ -20,17 +20,15 @@ async def execute_db_query(query: Any) -> Result:
 SQLModelSubClass = TypeVar('SQLModelSubClass', bound=SQLModel)
 
 
-async def create_model(model: SQLModelSubClass) -> bool:
+async def create_model(model: SQLModelSubClass) -> None:
     """The function that creates model"""
 
     async with database.Session() as session:
         session.add(model)
         try:
             await session.commit()
-        except IntegrityError:
-            return False
-
-    return True
+        except IntegrityError as e:
+            raise e.__cause__.__cause__  # type: ignore
 
 
 async def receive_models(model_type: type[SQLModelSubClass]) -> list[SQLModelSubClass]:
@@ -56,7 +54,7 @@ async def update_models(model_type: type[SQLModelSubClass], data: SQLModel,
 
     query = update(model_type).values(data.dict(exclude_none=True)).where(*conditions)
     try:
-        return (await execute_db_query(query)).rowcount
+        return (await execute_db_query(query)).rowcount  # type: ignore
     except IntegrityError:
         return None
 
@@ -65,7 +63,7 @@ async def delete_models(model_type: type[SQLModelSubClass], *conditions: BinaryE
     """The function that deletes models from the database and returns the number of deleted rows"""
 
     query = delete(model_type).where(*conditions)
-    row_count = (await execute_db_query(query)).rowcount
+    row_count = (await execute_db_query(query)).rowcount  # type: ignore
     return row_count
 
 

@@ -1,8 +1,8 @@
 import uuid as uuid_pkg
 
 from pydantic import EmailStr
-from sqlalchemy import Column
-from sqlalchemy.dialects.postgresql import TEXT
+from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy.dialects.postgresql import TEXT, UUID
 from sqlmodel import SQLModel, Field
 
 from src.utils import ChangesAreNotEmptyMixin
@@ -33,4 +33,17 @@ class GovStructureCreate(GovStructureBase):
 class GovStructureUpdate(GovStructureBase, ChangesAreNotEmptyMixin):
     """The model that represents the fields needed to change the government structure"""
 
-    name: str | None
+    name: str | None  # type: ignore
+
+
+class GovStructureSubscription(SQLModel, table=True):
+    """
+    The model that represents the subscription to the government structure
+
+    This means that the subscriber automatically subscribes to all events organized by this government structure
+    """
+
+    gov_structure_uuid: uuid_pkg.UUID = Field(
+        sa_column=Column(UUID(as_uuid=True), ForeignKey('govstructure.uuid', ondelete='CASCADE'), primary_key=True))
+    user_id: int = Field(
+        sa_column=Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), primary_key=True))

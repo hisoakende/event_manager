@@ -1,8 +1,10 @@
+from asyncpg import UniqueViolationError
 from sqlalchemy import insert, select, text
 
 from src import database
 from src.redis_ import redis_engine
-from src.service import execute_db_query, create_model, receive_model, update_models, delete_models, is_user_in_blacklist
+from src.service import execute_db_query, create_model, receive_model, update_models, delete_models, \
+    is_user_in_blacklist
 from src.users.models import User, UserUpdate
 from tests import config
 from tests.service import DBProcessedIsolatedAsyncTestCase
@@ -23,14 +25,11 @@ class TestExecuteDBQuery(DBProcessedIsolatedAsyncTestCase):
 class TestCreateModel(DBProcessedIsolatedAsyncTestCase):
 
     async def test_successful_creating(self) -> None:
-        expected_result = True
-        result = await create_model(User(first_name='Имя', last_name='Фамилия', patronymic='Отчество',
+        await create_model(User(first_name='Имя', last_name='Фамилия', patronymic='Отчество',
                                          email='example@example.com', password='Example123'))
-        self.assertEqual(result, expected_result)
 
         async with database.Session() as session:
             expected_id = await session.scalar(text("SELECT nextval('user_id_seq')")) - 1
-        async with database.Session() as session:
             id_ = (await session.scalar(select(User).where(User.email == 'example@example.com'))).id
         self.assertEqual(id_, expected_id)
 
@@ -42,14 +41,13 @@ class TestCreateModel(DBProcessedIsolatedAsyncTestCase):
         user = User(first_name='Имя', last_name='Фамилия', patronymic='Отчество',
                     email='example@example1.com', password='Example123')
 
-        async with database.Session() as session:
-            next_id = await session.scalar(text("SELECT nextval('user_id_seq')")) + 1
-            by_next_id = await session.scalar(select(User).where(User.id == next_id))
-        self.assertIsNone(by_next_id)
+        with self.assertRaises(UniqueViolationError):
+            await create_model(user)
 
-        expected_result = False
-        result = await create_model(user)
-        self.assertEqual(result, expected_result)
+        async with database.Session() as session:
+            id_ = await session.scalar(text("SELECT nextval('user_id_seq')")) - 1
+            by_id = await session.scalar(select(User).where(User.id == id_))
+        self.assertIsNone(by_id)
 
 
 class TestReceiveModel(DBProcessedIsolatedAsyncTestCase):

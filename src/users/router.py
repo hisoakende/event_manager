@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from asyncpg.exceptions import UniqueViolationError
 from fastapi import APIRouter, HTTPException, status, Depends
 
 from src.dependencies import authorize_user
@@ -24,8 +25,9 @@ async def create_user(user_create: UserCreate) -> UserRead:
     if user_create.government_key and user_create.government_key == config.GOVERNMENT_KEY:
         user.is_government_worker = True
 
-    is_created = await create_model(user)
-    if not is_created:
+    try:
+        await create_model(user)
+    except UniqueViolationError:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                             detail=[{'loc': ['body', 'email'],
                                      'msg': 'this email is already in use',

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import unittest
 
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -38,6 +39,7 @@ def main() -> None:
     loader = unittest.TestLoader()
     suite.addTests(loader.discover('tests'))
 
+    logging.disable(logging.CRITICAL)
     runner = unittest.TextTestRunner()
     runner.run(suite)
 

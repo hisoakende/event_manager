@@ -1,10 +1,14 @@
 import uuid as uuid_pkg
+from typing import Annotated
 
+from asyncpg import UniqueViolationError, ForeignKeyViolationError
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.dependencies import authorize_user
-from src.gov_structures.models import GovStructure, GovStructureCreate, GovStructureUpdate
+from src.gov_structures.models import GovStructure, GovStructureCreate, GovStructureUpdate, GovStructureSubscription
+from src.gov_structures.service import receive_subs_to_the_gov_structure_from_db
 from src.service import create_model, receive_model, receive_models, delete_models, update_models
+from src.users.models import UserRead
 
 gov_structures_router = APIRouter(
     prefix='/government-structures',
@@ -59,3 +63,45 @@ async def delete_gov_structure(uuid: uuid_pkg.UUID) -> None:
     is_deleted = await delete_models(GovStructure, GovStructure.uuid == uuid)  # type: ignore
     if not is_deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+
+@gov_structures_router.post('/{uuid}/subscription/', status_code=status.HTTP_204_NO_CONTENT)
+async def subscribe_to_the_gov_structure(uuid: uuid_pkg.UUID,
+                                         user_id: Annotated[int, Depends(authorize_user())]) -> None:
+    """The view that processes subscribing to the government structure"""
+
+    subscription = GovStructureSubscription(gov_structure_uuid=uuid, user_id=user_id)
+
+    try:
+        await create_model(subscription)
+    except UniqueViolationError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail=[{'loc': ['path', 'uuid'],
+                                     'msg': 'you have already subscribed to this government structure',
+                                     'type': 'value_error'}])
+    except ForeignKeyViolationError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+
+@gov_structures_router.delete('/{uuid}/subscription/', status_code=status.HTTP_204_NO_CONTENT)
+async def unsubscribe_from_the_gov_structure(uuid: uuid_pkg.UUID,
+                                             user_id: Annotated[int, Depends(authorize_user())]) -> None:
+    """The view that processes unsubscribing to the government structure"""
+
+    is_deleted = await delete_models(GovStructureSubscription,
+                                     GovStructureSubscription.gov_structure_uuid == uuid,  # type: ignore
+                                     GovStructureSubscription.user_id == user_id)  # type: ignore
+    if not is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+
+@gov_structures_router.get('/{uuid}/subscribers/', dependencies=[Depends(authorize_user(is_government_worker=True))])
+async def receive_subscribers_to_the_gov_structure(uuid: uuid_pkg.UUID) -> list[UserRead]:
+    """The view that processes getting subscribers to the government structure"""
+
+    gov_structure = await receive_model(GovStructure, GovStructure.uuid == uuid)  # type: ignore
+    if gov_structure is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    users = await receive_subs_to_the_gov_structure_from_db(uuid)
+    return [UserRead.from_orm(user) for user in users]
