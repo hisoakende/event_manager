@@ -19,7 +19,7 @@ class GovStructureBase(SQLModel):
 
 class GovStructure(GovStructureBase, table=True):
     """
-    The model that represents the government structure,
+    The model that represents the government structure in the database,
     such as the Ministry of Emergency Situations or the Ministry of Education
     """
 
@@ -38,7 +38,7 @@ class GovStructureUpdate(GovStructureBase, ChangesAreNotEmptyMixin):
 
 class GovStructureSubscription(SQLModel, table=True):
     """
-    The model that represents the subscription to the government structure
+    The model that represents the subscription to the government structure in the database
 
     This means that the subscriber automatically subscribes to all events organized by this government structure
     """

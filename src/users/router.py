@@ -18,11 +18,11 @@ AuthorizeUserDep = Annotated[int, Depends(authorize_user())]
 
 
 @users_router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_user(user_create: UserCreate) -> UserRead:
+async def create_user(user_data: UserCreate) -> UserRead:
     """The view that processes creation the user (registration)"""
 
-    user = User.from_orm(user_create)
-    if user_create.government_key and user_create.government_key == config.GOVERNMENT_KEY:
+    user = User.from_orm(user_data)
+    if user_data.government_key and user_data.government_key == config.GOVERNMENT_KEY:
         user.is_government_worker = True
 
     try:

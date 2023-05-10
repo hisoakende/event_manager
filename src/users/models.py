@@ -59,7 +59,7 @@ class UserCreate(UserBaseWithPassword, UserValidator):
 
 
 class UserRead(UserBase):
-    """That model that represents the fields which will be returned by API"""
+    """The model that represents the fields which will be returned by API"""
 
     is_government_worker: bool
 
