@@ -26,7 +26,7 @@ class TestCreateModel(DBProcessedIsolatedAsyncTestCase):
 
     async def test_successful_creating(self) -> None:
         await create_model(User(first_name='Имя', last_name='Фамилия', patronymic='Отчество',
-                                         email='example@example.com', password='Example123'))
+                                email='example@example.com', password='Example123'))
 
         async with database.Session() as session:
             expected_id = await session.scalar(text("SELECT nextval('user_id_seq')")) - 1
@@ -88,9 +88,8 @@ class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
                                                       patronymic='Отчество', email='example@example4.com',
                                                       password='Example123'))
 
-        expected_result = None
-        result = await update_models(User, UserUpdate(email='example@example3.com'))
-        self.assertEqual(result, expected_result)
+        with self.assertRaises(UniqueViolationError):
+            await update_models(User, UserUpdate(email='example@example3.com'), User.id == 6000)  # type: ignore
 
         expected_email = 'example@example4.com'
         async with database.Session() as session:

@@ -40,7 +40,8 @@ class GovStructureSubscription(SQLModel, table=True):
     """
     The model that represents the subscription to the government structure in the database
 
-    This means that the subscriber automatically subscribes to all events organized by this government structure
+    This means that the subscriber automatically subscribes (he will be notified of the events)
+    to all events organized by this government structure
     """
 
     gov_structure_uuid: uuid_pkg.UUID = Field(

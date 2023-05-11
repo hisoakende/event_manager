@@ -25,6 +25,7 @@ async def create_model(model: SQLModelSubClass) -> None:
 
     async with database.Session() as session:
         session.add(model)
+
         try:
             await session.commit()
         except IntegrityError as e:
@@ -49,14 +50,17 @@ async def update_models(model_type: type[SQLModelSubClass], data: SQLModel,
                         *conditions: BinaryExpression) -> int | None:
     """
     The function that updates models and returns the number of updated rows
-    if the update is successful, otherwise None
+    if the update is successful, otherwise raise the base exception
     """
 
     query = update(model_type).values(data.dict(exclude_none=True)).where(*conditions)
+
     try:
-        return (await execute_db_query(query)).rowcount  # type: ignore
-    except IntegrityError:
-        return None
+        row_count = (await execute_db_query(query)).rowcount  # type: ignore
+    except IntegrityError as e:
+        raise e.__cause__.__cause__  # type: ignore
+
+    return row_count
 
 
 async def delete_models(model_type: type[SQLModelSubClass], *conditions: BinaryExpression) -> int:

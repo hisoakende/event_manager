@@ -47,8 +47,9 @@ async def receive_user(user_id: AuthorizeUserDep) -> UserRead:
 async def update_user(user_changes: UserUpdate, user_id: AuthorizeUserDep) -> UserRead:
     """The view that processes updating the user"""
 
-    is_updated = await update_models(User, user_changes, User.id == user_id)  # type: ignore
-    if not is_updated:
+    try:
+        await update_models(User, user_changes, User.id == user_id)  # type: ignore
+    except UniqueViolationError:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                             detail=[{'loc': ['body', 'email'],
                                      'msg': 'this email is already in use',

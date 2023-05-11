@@ -1,11 +1,12 @@
 import datetime as datetime_pkg
 import uuid as uuid_pkg
 
-from sqlalchemy import Column, TEXT, ForeignKey
+from sqlalchemy import Column, TEXT, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import SQLModel, Field, Relationship
 
 from src.gov_structures.models import GovStructure
+from src.utils import ChangesAreNotEmptyMixin
 
 
 class EventBase(SQLModel):
@@ -48,9 +49,19 @@ class EventRead(EventBaseWithUUID):
     gov_structure: GovStructure
 
 
-class EventUpdate(EventBase):
+class EventUpdate(EventBase, ChangesAreNotEmptyMixin):
     """The model that represents the fields needed to change the government structure"""
 
     name: str | None = None  # type: ignore
+    datetime: datetime_pkg.datetime | None = None  # type: ignore
     gov_structure_uuid: uuid_pkg.UUID | None = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey('govstructure.uuid', ondelete='CASCADE')), default=None)
+
+
+class EventSubscription(SQLModel, table=True):
+    """The model that represents the subscription to the event in the database"""
+
+    event_uuid: uuid_pkg.UUID = Field(
+        sa_column=Column(UUID(as_uuid=True), ForeignKey('event.uuid', ondelete='CASCADE'), primary_key=True))
+    user_id: int = Field(
+        sa_column=Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), primary_key=True))
