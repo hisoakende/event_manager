@@ -1,5 +1,6 @@
 from typing import Any, TypeVar
 
+from fastapi_filter.contrib.sqlalchemy import Filter
 from sqlalchemy import select, update, delete
 from sqlalchemy.engine import Result
 from sqlalchemy.exc import IntegrityError
@@ -8,6 +9,7 @@ from sqlmodel import SQLModel
 
 from src import database, config
 from src.redis_ import redis_engine
+from src.sfp import SortingFilteringPaging
 
 
 async def execute_db_query(query: Any) -> Result:
@@ -32,10 +34,13 @@ async def create_model(model: SQLModelSubClass) -> None:
             raise e.__cause__.__cause__  # type: ignore
 
 
-async def receive_models(model_type: type[SQLModelSubClass]) -> list[SQLModelSubClass]:
-    """The function that returns all models of the given model type"""
+async def receive_models_by_sfp_or_filter(model_type: type[SQLModelSubClass],
+                                          model_sfp_or_filter: Filter) -> list[SQLModelSubClass]:
+    """The function that returns models using sorting, filtering and, if necessary, pagination"""
 
-    query = select(model_type)
+    query = model_sfp_or_filter.sort(model_sfp_or_filter.filter(select(model_type)))
+    if isinstance(model_sfp_or_filter, SortingFilteringPaging):
+        query = model_sfp_or_filter.paginate(query)
     return (await execute_db_query(query)).scalars().fetchall()
 
 
@@ -53,7 +58,7 @@ async def update_models(model_type: type[SQLModelSubClass], data: SQLModel,
     if the update is successful, otherwise raise the base exception
     """
 
-    query = update(model_type).values(data.dict(exclude_none=True)).where(*conditions)
+    query = update(model_type).values(data.dict(exclude_unset=True)).where(*conditions)
 
     try:
         row_count = (await execute_db_query(query)).rowcount  # type: ignore

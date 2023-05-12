@@ -6,9 +6,11 @@ from fastapi import APIRouter, status, Depends, HTTPException
 
 from src.dependencies import authorize_user
 from src.events.models import EventCreate, Event, EventRead, EventUpdate, EventSubscription
-from src.events.service import does_user_is_sub_to_event_by_sub_to_gov_structure, receive_all_subscribers_to_event
+from src.events.service import does_user_is_sub_to_event_by_sub_to_gov_structure, receive_subs_to_event_from_db
+from src.events.sfp import EventsSFP
 from src.gov_structures.models import GovStructure
-from src.service import create_model, receive_model, receive_models, update_models, delete_models
+from src.service import create_model, receive_model, update_models, delete_models, receive_models_by_sfp_or_filter
+from src.sfp import UsersSFP
 from src.users.models import UserRead
 
 events_router = APIRouter(
@@ -38,10 +40,10 @@ async def create_event(event_data: EventCreate) -> EventRead:
 
 
 @events_router.get('/', dependencies=[Depends(authorize_user())])
-async def receive_events() -> list[EventRead]:
+async def receive_events(events_sfp: Annotated[EventsSFP, Depends(EventsSFP)]) -> list[EventRead]:
     """The view that processes getting all events"""
 
-    return [EventRead.from_orm(event) for event in await receive_models(Event)]
+    return [EventRead.from_orm(event) for event in await receive_models_by_sfp_or_filter(Event, events_sfp)]
 
 
 @events_router.get('/{uuid}/', dependencies=[Depends(authorize_user())])
@@ -119,12 +121,14 @@ async def unsubscribe_from_event(uuid: uuid_pkg.UUID, user_id: Annotated[int, De
 
 
 @events_router.get('/{uuid}/subscribers/', dependencies=[Depends(authorize_user(is_government_worker=True))])
-async def receive_subscribers_to_event(uuid: uuid_pkg.UUID) -> list[UserRead]:
+async def receive_subscribers_to_event(
+        uuid: uuid_pkg.UUID,
+        users_sfp: Annotated[UsersSFP, Depends(UsersSFP)]) -> list[UserRead]:
     """The view that processes getting subscribers to the event"""
 
     event = await receive_model(Event, Event.uuid == uuid)  # type: ignore
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    users = await receive_all_subscribers_to_event(uuid, event.gov_structure_uuid)
+    users = await receive_subs_to_event_from_db(uuid, event.gov_structure_uuid, users_sfp)
     return [UserRead.from_orm(user) for user in users]

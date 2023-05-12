@@ -5,6 +5,7 @@ from sqlalchemy import select, union
 from src.events.models import Event, EventSubscription
 from src.gov_structures.models import GovStructureSubscription, GovStructure
 from src.service import execute_db_query
+from src.sfp import SortingFilteringPaging
 from src.users.models import UserRead, User
 
 
@@ -23,8 +24,9 @@ async def does_user_is_sub_to_event_by_sub_to_gov_structure(event_uuid: uuid_pkg
     return bool((await execute_db_query(query)).scalar())
 
 
-async def receive_all_subscribers_to_event(event_uuid: uuid_pkg.UUID,
-                                           gov_structure_uuid: uuid_pkg.UUID) -> list[UserRead]:
+async def receive_subs_to_event_from_db(event_uuid: uuid_pkg.UUID,
+                                        gov_structure_uuid: uuid_pkg.UUID,
+                                        users_sfp: SortingFilteringPaging) -> list[UserRead]:
     """
     The function that returns the list of all users who are subscribed to the event,
     including those who are subscribed to the government structure that hosts this event
@@ -38,5 +40,7 @@ async def receive_all_subscribers_to_event(event_uuid: uuid_pkg.UUID,
         .join(GovStructureSubscription, GovStructureSubscription.user_id == User.id) \
         .where(GovStructureSubscription.gov_structure_uuid == gov_structure_uuid)
 
-    query = select(User).from_statement(union(event_subs_query, gov_structure_subs_query))
+    query = users_sfp.paginate(union(event_subs_query, gov_structure_subs_query))
+    query = users_sfp.sort(users_sfp.filter(query))
+    query = select(User).from_statement(query)
     return (await execute_db_query(query)).scalars().fetchall()

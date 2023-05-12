@@ -7,7 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from src.dependencies import authorize_user
 from src.gov_structures.models import GovStructure, GovStructureCreate, GovStructureUpdate, GovStructureSubscription
 from src.gov_structures.service import receive_subs_to_gov_structure_from_db
-from src.service import create_model, receive_model, receive_models, delete_models, update_models
+from src.gov_structures.sfp import GovStructureSFP
+from src.service import create_model, receive_model, delete_models, update_models, receive_models_by_sfp_or_filter
+from src.sfp import UsersSFP
 from src.users.models import UserRead
 
 gov_structures_router = APIRouter(
@@ -27,10 +29,11 @@ async def create_gov_structure(gov_structure_data: GovStructureCreate) -> GovStr
 
 
 @gov_structures_router.get('/', dependencies=[Depends(authorize_user())])
-async def receive_gov_structures() -> list[GovStructure]:
+async def receive_gov_structures(
+        gov_structure_sfp: Annotated[GovStructureSFP, Depends(GovStructureSFP)]) -> list[GovStructure]:
     """The view that processes getting all government structures"""
 
-    return await receive_models(GovStructure)
+    return await receive_models_by_sfp_or_filter(GovStructure, gov_structure_sfp)
 
 
 @gov_structures_router.get('/{uuid}/', dependencies=[Depends(authorize_user())])
@@ -95,12 +98,14 @@ async def unsubscribe_from_gov_structure(uuid: uuid_pkg.UUID,
 
 
 @gov_structures_router.get('/{uuid}/subscribers/', dependencies=[Depends(authorize_user(is_government_worker=True))])
-async def receive_subscribers_to_gov_structure(uuid: uuid_pkg.UUID) -> list[UserRead]:
+async def receive_subscribers_to_gov_structure(
+        uuid: uuid_pkg.UUID,
+        users_sfp: Annotated[UsersSFP, Depends(UsersSFP)]) -> list[UserRead]:
     """The view that processes getting subscribers to the government structure"""
 
     gov_structure = await receive_model(GovStructure, GovStructure.uuid == uuid)  # type: ignore
     if gov_structure is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    users = await receive_subs_to_gov_structure_from_db(uuid)
+    users = await receive_subs_to_gov_structure_from_db(uuid, users_sfp)
     return [UserRead.from_orm(user) for user in users]

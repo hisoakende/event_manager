@@ -2,20 +2,20 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi_jwt_auth.exceptions import AuthJWTException
 
-from src.auth import auth_router
+import src.auth.router
+import src.events.router
+import src.gov_structures.router
+import src.users.router
 from src.database import db_startup, db_shutdown
-from src.events import events_router
-from src.gov_structures import gov_structures_router
-from src.users import users_router
 
 app = FastAPI(
     title='event_manager'
 )
 
-app.include_router(users_router)
-app.include_router(auth_router)
-app.include_router(gov_structures_router)
-app.include_router(events_router)
+app.include_router(src.users.router.users_router)
+app.include_router(src.auth.router.auth_router)
+app.include_router(src.gov_structures.router.gov_structures_router)
+app.include_router(src.events.router.events_router)
 
 
 @app.exception_handler(AuthJWTException)

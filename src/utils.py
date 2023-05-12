@@ -6,9 +6,14 @@ from sqlmodel import SQLModel
 
 class ChangesAreNotEmptyMixin(SQLModel):
 
-    @root_validator
+    @root_validator(pre=True)
     def changes_are_empty(cls, values: dict[str, Any]) -> dict[str, Any]:
-        if all(value is None for value in values.values()):
-            raise ValueError('you must specify at least one field')
+        """
+        The validator that checks for the existence of at least one field in the model
 
+        This is necessary for the correct update of the data
+        """
+
+        if not values:
+            raise ValueError('you must specify at least one field')
         return values
