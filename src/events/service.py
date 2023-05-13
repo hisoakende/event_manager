@@ -1,6 +1,7 @@
 import uuid as uuid_pkg
 
 from sqlalchemy import select, union
+from sqlalchemy.orm import noload, lazyload
 
 from src.events.models import Event, EventSubscription
 from src.gov_structures.models import GovStructureSubscription, GovStructure
@@ -16,12 +17,19 @@ async def does_user_is_sub_to_event_by_sub_to_gov_structure(event_uuid: uuid_pkg
     to the government structure that hosts this event
     """
 
-    query = select(GovStructureSubscription) \
-        .join(GovStructure, GovStructure.uuid == GovStructureSubscription.gov_structure_uuid) \
-        .join(Event, Event.gov_structure_uuid == GovStructure.uuid) \
-        .where(GovStructureSubscription.user_id == user_id,
-               Event.uuid == event_uuid)
-    return bool((await execute_db_query(query)).scalar())
+    event_query = select(Event).where(Event.uuid == event_uuid).options(noload(Event.gov_structure))
+    event = (await execute_db_query(event_query)).scalar()
+
+    if event is None:
+        return False
+
+    gov_structure_sub_query = select(GovStructureSubscription).where(
+        GovStructureSubscription.gov_structure_uuid == event.gov_structure_uuid,
+        GovStructureSubscription.user_id == user_id
+    )
+    gov_structure_sub = (await execute_db_query(gov_structure_sub_query)).scalar()
+
+    return gov_structure_sub is not None
 
 
 async def receive_subs_to_event_from_db(event_uuid: uuid_pkg.UUID,

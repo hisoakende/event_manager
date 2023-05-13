@@ -1,6 +1,5 @@
 from sqlalchemy import insert
 
-from src import database
 from src.auth.models import RefreshToken
 from src.auth.service import does_refresh_token_exist
 from src.users.models import User
@@ -10,7 +9,7 @@ from tests.service import DBProcessedIsolatedAsyncTestCase
 class TestDoesRefreshTokenExist(DBProcessedIsolatedAsyncTestCase):
 
     async def test_token_exist(self) -> None:
-        async with database.Session() as session, session.begin():
+        async with self.Session() as session, session.begin():
             await session.execute(insert(User).values({'first_name': 'Имя', 'last_name': 'Фамилия',
                                                        'patronymic': 'Отчество', 'email': 'email@email.com',
                                                        'id': 14000, 'password': 'Password123'}))

@@ -2,7 +2,6 @@ from unittest.mock import Mock
 
 from fastapi import HTTPException
 
-from src import database
 from src.auth.models import RefreshToken
 from src.dependencies import authorize_user
 from src.redis_ import redis_engine
@@ -20,7 +19,7 @@ class TestAuthorizeUser(DBProcessedIsolatedAsyncTestCase):
         self.authorise.get_raw_jwt = lambda: {'is_government_worker': False}
         self.authorise._token = 'token'
 
-        async with database.Session() as session:
+        async with self.Session() as session:
             session.add(User(id=1000, first_name='Имя', last_name='Фамилия', patronymic='Отчество',
                              email='example@email.com', password='Example123'))
             await session.commit()

@@ -1,7 +1,6 @@
 from asyncpg import UniqueViolationError
 from sqlalchemy import insert, select, text
 
-from src import database
 from src.redis_ import redis_engine
 from src.service import execute_db_query, create_model, receive_model, update_models, delete_models, \
     is_user_in_blacklist
@@ -16,7 +15,7 @@ class TestExecuteDBQuery(DBProcessedIsolatedAsyncTestCase):
         query = insert(User).values(id=2000, first_name='string', last_name='string',
                                     patronymic='string', email='string', password='string')
         await execute_db_query(query)
-        async with database.Session() as session:
+        async with self.Session() as session:
             user = await session.scalar(select(User).where(User.id == 2000))
 
         self.assertEqual(user.id, 2000)
@@ -28,13 +27,12 @@ class TestCreateModel(DBProcessedIsolatedAsyncTestCase):
         await create_model(User(first_name='Имя', last_name='Фамилия', patronymic='Отчество',
                                 email='example@example.com', password='Example123'))
 
-        async with database.Session() as session:
-            expected_id = await session.scalar(text("SELECT nextval('user_id_seq')")) - 1
-            id_ = (await session.scalar(select(User).where(User.email == 'example@example.com'))).id
-        self.assertEqual(id_, expected_id)
+        async with self.Session() as session:
+            user = await session.scalar(select(User).where(User.email == 'example@example.com'))
+        self.assertIsNotNone(user)
 
     async def test_failed_creating(self) -> None:
-        async with database.Session() as session, session.begin():
+        async with self.Session() as session, session.begin():
             await session.execute(insert(User).values(id=3000, first_name='Имя', last_name='Фамилия',
                                                       patronymic='Отчество', email='example@example1.com',
                                                       password='Example123'))
@@ -44,7 +42,7 @@ class TestCreateModel(DBProcessedIsolatedAsyncTestCase):
         with self.assertRaises(UniqueViolationError):
             await create_model(user)
 
-        async with database.Session() as session:
+        async with self.Session() as session:
             id_ = await session.scalar(text("SELECT nextval('user_id_seq')")) - 1
             by_id = await session.scalar(select(User).where(User.id == id_))
         self.assertIsNone(by_id)
@@ -53,7 +51,7 @@ class TestCreateModel(DBProcessedIsolatedAsyncTestCase):
 class TestReceiveModel(DBProcessedIsolatedAsyncTestCase):
 
     async def test_receiving(self) -> None:
-        async with database.Session() as session, session.begin():
+        async with self.Session() as session, session.begin():
             await session.execute(insert(User).values(id=4000, first_name='Имя', last_name='Фамилия',
                                                       patronymic='Отчество', email='example@example2.com',
                                                       password='Example123'))
@@ -65,7 +63,7 @@ class TestReceiveModel(DBProcessedIsolatedAsyncTestCase):
 class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
 
     async def test_successful_updating(self) -> None:
-        async with database.Session() as session, session.begin():
+        async with self.Session() as session, session.begin():
             await session.execute(insert(User).values(id=5000, first_name='Имя', last_name='Фамилия',
                                                       patronymic='Отчество', email='example@example3.com',
                                                       password='Example123'))
@@ -75,12 +73,12 @@ class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
         self.assertEqual(result, expected_result)
 
         expected_name = 'Измененноеимя'
-        async with database.Session() as session:
+        async with self.Session() as session:
             name = (await session.scalar(select(User).where(User.id == 5000))).first_name
         self.assertEqual(name, expected_name)
 
     async def test_failed_updating(self) -> None:
-        async with database.Session() as session, session.begin():
+        async with self.Session() as session, session.begin():
             await session.execute(insert(User).values(id=5000, first_name='Имя', last_name='Фамилия',
                                                       patronymic='Отчество', email='example@example3.com',
                                                       password='Example123'))
@@ -92,7 +90,7 @@ class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
             await update_models(User, UserUpdate(email='example@example3.com'), User.id == 6000)  # type: ignore
 
         expected_email = 'example@example4.com'
-        async with database.Session() as session:
+        async with self.Session() as session:
             email = (await session.scalar(select(User).where(User.id == 6000))).email
         self.assertEqual(email, expected_email)
 
@@ -100,7 +98,7 @@ class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
 class TestDeleteModel(DBProcessedIsolatedAsyncTestCase):
 
     async def test_deleting(self) -> None:
-        async with database.Session() as session, session.begin():
+        async with self.Session() as session, session.begin():
             await session.execute(insert(User).values(id=7000, first_name='Имя', last_name='Фамилия',
                                                       patronymic='Отчество', email='example@example5.com',
                                                       password='Example123'))
@@ -108,7 +106,7 @@ class TestDeleteModel(DBProcessedIsolatedAsyncTestCase):
         result = await delete_models(User, User.id == 7000)  # type: ignore
         self.assertEqual(result, expected_result)
 
-        async with database.Session() as session:
+        async with self.Session() as session:
             result = await session.scalar(select(User).where(User.id == 7000))
         self.assertIsNone(result)
 

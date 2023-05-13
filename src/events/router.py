@@ -4,6 +4,7 @@ from typing import Annotated
 from asyncpg import ForeignKeyViolationError, UniqueViolationError
 from fastapi import APIRouter, status, Depends, HTTPException
 
+from src import config
 from src.dependencies import authorize_user
 from src.events.models import EventCreate, Event, EventRead, EventUpdate, EventSubscription
 from src.events.service import does_user_is_sub_to_event_by_sub_to_gov_structure, receive_subs_to_event_from_db
@@ -47,7 +48,7 @@ async def receive_events(events_sfp: Annotated[EventsSFP, Depends(EventsSFP)]) -
 
 
 @events_router.get('/{uuid}/', dependencies=[Depends(authorize_user())])
-async def receive_event() -> EventRead:
+async def receive_event(uuid: uuid_pkg.UUID) -> EventRead:
     """The view that processes getting the event"""
 
     event = await receive_model(Event, Event.uuid == uuid)  # type: ignore
@@ -121,9 +122,8 @@ async def unsubscribe_from_event(uuid: uuid_pkg.UUID, user_id: Annotated[int, De
 
 
 @events_router.get('/{uuid}/subscribers/', dependencies=[Depends(authorize_user(is_government_worker=True))])
-async def receive_subscribers_to_event(
-        uuid: uuid_pkg.UUID,
-        users_sfp: Annotated[UsersSFP, Depends(UsersSFP)]) -> list[UserRead]:
+async def receive_subscribers_to_event(uuid: uuid_pkg.UUID,
+                                       users_sfp: Annotated[UsersSFP, Depends(UsersSFP)]) -> list[UserRead]:
     """The view that processes getting subscribers to the event"""
 
     event = await receive_model(Event, Event.uuid == uuid)  # type: ignore
