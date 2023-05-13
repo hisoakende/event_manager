@@ -15,49 +15,49 @@ class TestDoesUserIsSubToEventBySubToGovStructure(DBProcessedIsolatedAsyncTestCa
 
     async def asyncSetUp(self) -> None:
         await super().asyncSetUp()
-        self.uuid_gov_structure = uuid_pkg.uuid4()
-        self.uuid_event = uuid_pkg.uuid4()
+        self.gov_structure_uuid = uuid_pkg.uuid4()
+        self.event_uuid = uuid_pkg.uuid4()
         self.datetime_ = datetime.datetime(year=2020, month=1, day=1)
         self.user_id = 1110
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=self.uuid_gov_structure, name='gov structure'))
-            await session.execute(insert(Event).values(uuid=self.uuid_event, name='event',
-                                                       gov_structure_uuid=self.uuid_gov_structure,
+            await session.execute(insert(GovStructure).values(uuid=self.gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(Event).values(uuid=self.event_uuid, name='event',
+                                                       gov_structure_uuid=self.gov_structure_uuid,
                                                        datetime=self.datetime_))
             await session.execute(insert(User).values({'id': self.user_id, 'first_name': 'Имя', 'last_name': 'Фамилия',
                                                        'patronymic': 'Отчество', 'email': 'email@email.com',
                                                        'password': 'Password123'}))
-            await session.execute(insert(GovStructureSubscription).values(gov_structure_uuid=self.uuid_gov_structure,
+            await session.execute(insert(GovStructureSubscription).values(gov_structure_uuid=self.gov_structure_uuid,
                                                                           user_id=self.user_id))
 
     async def test_user_is_sub_to_gov_structure(self) -> None:
         expected_result = True
-        result = await does_user_is_sub_to_event_by_sub_to_gov_structure(self.uuid_event, self.user_id)
+        result = await does_user_is_sub_to_event_by_sub_to_gov_structure(self.event_uuid, self.user_id)
         self.assertEqual(result, expected_result)
 
     async def test_user_is_not_sub_to_gov_structure(self) -> None:
         async with self.Session() as session, session.begin():
             await session.execute(delete(GovStructureSubscription).where(
-                GovStructureSubscription.gov_structure_uuid == self.uuid_gov_structure))
+                GovStructureSubscription.gov_structure_uuid == self.gov_structure_uuid))
 
         expected_result = False
-        result = await does_user_is_sub_to_event_by_sub_to_gov_structure(self.uuid_event, self.user_id)
+        result = await does_user_is_sub_to_event_by_sub_to_gov_structure(self.event_uuid, self.user_id)
         self.assertEqual(result, expected_result)
 
     async def test_event_doesnt_exist(self) -> None:
         async with self.Session() as session, session.begin():
-            await session.execute(delete(Event).where(Event.uuid == self.uuid_event))
+            await session.execute(delete(Event).where(Event.uuid == self.event_uuid))
 
         expected_result = False
-        result = await does_user_is_sub_to_event_by_sub_to_gov_structure(self.uuid_event, self.user_id)
+        result = await does_user_is_sub_to_event_by_sub_to_gov_structure(self.event_uuid, self.user_id)
         self.assertEqual(result, expected_result)
 
 
 class TestReceiveSubsToEventFromDb(DBProcessedIsolatedAsyncTestCase):
 
     async def test_receiving(self) -> None:
-        uuid_gov_structure = uuid_pkg.uuid4()
-        uuid_event = uuid_pkg.uuid4()
+        gov_structure_uuid = uuid_pkg.uuid4()
+        event_uuid = uuid_pkg.uuid4()
         datetime_ = datetime.datetime(year=2020, month=1, day=1)
         user1 = User(first_name='Имя', last_name='Фамилия', patronymic='Отчество',
                      email='email@email.com', password='Password123')
@@ -70,15 +70,15 @@ class TestReceiveSubsToEventFromDb(DBProcessedIsolatedAsyncTestCase):
             session.add(user2)
 
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=uuid_gov_structure, name='gov structure'))
-            await session.execute(insert(Event).values(uuid=uuid_event, name='event',
-                                                       gov_structure_uuid=uuid_gov_structure,
+            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(Event).values(uuid=event_uuid, name='event',
+                                                       gov_structure_uuid=gov_structure_uuid,
                                                        datetime=datetime_))
-            await session.execute(insert(GovStructureSubscription).values(gov_structure_uuid=uuid_gov_structure,
+            await session.execute(insert(GovStructureSubscription).values(gov_structure_uuid=gov_structure_uuid,
                                                                           user_id=user1_id))
-            await session.execute(insert(EventSubscription).values(event_uuid=uuid_event,
+            await session.execute(insert(EventSubscription).values(event_uuid=event_uuid,
                                                                    user_id=user2_id))
 
         expected_result = [user2, user1]
-        result = await receive_subs_to_event_from_db(uuid_event, uuid_gov_structure, UsersSFP(page=0, size=100))
+        result = await receive_subs_to_event_from_db(event_uuid, gov_structure_uuid, UsersSFP(page=0, size=100))
         self.assertEqual(result, expected_result)

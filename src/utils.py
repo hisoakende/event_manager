@@ -7,7 +7,7 @@ from sqlmodel import SQLModel
 class ChangesAreNotEmptyMixin(SQLModel):
 
     @root_validator(pre=True)
-    def changes_are_empty(cls, values: dict[str, Any]) -> dict[str, Any]:
+    def changes_are_not_empty(cls, values: dict[str, Any]) -> dict[str, Any]:
         """
         The validator that checks for the existence of at least one field in the model
 

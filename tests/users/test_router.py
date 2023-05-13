@@ -82,7 +82,7 @@ class TestReceiveUser(DBProcessedIsolatedAsyncTestCase):
         self.assertEqual(response.json(), self.basic | {'is_government_worker': False})
 
 
-class TestChangeUser(DBProcessedIsolatedAsyncTestCase):
+class TestUpdateUser(DBProcessedIsolatedAsyncTestCase):
     test_endpoint = True
 
     basic = {'first_name': 'Имя', 'last_name': 'Фамилия',
