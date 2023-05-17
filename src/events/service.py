@@ -1,10 +1,11 @@
 import uuid as uuid_pkg
 
 from sqlalchemy import select, union
-from sqlalchemy.orm import noload, lazyload
+from sqlalchemy.orm import noload
+from sqlalchemy.sql import CompoundSelect
 
 from src.events.models import Event, EventSubscription
-from src.gov_structures.models import GovStructureSubscription, GovStructure
+from src.gov_structures.models import GovStructureSubscription
 from src.service import execute_db_query
 from src.sfp import SortingFilteringPaging
 from src.users.models import UserRead, User
@@ -32,11 +33,10 @@ async def does_user_is_sub_to_event_by_sub_to_gov_structure(event_uuid: uuid_pkg
     return gov_structure_sub is not None
 
 
-async def receive_subs_to_event_from_db(event_uuid: uuid_pkg.UUID,
-                                        gov_structure_uuid: uuid_pkg.UUID,
-                                        users_sfp: SortingFilteringPaging) -> list[UserRead]:
+def create_receiving_subs_to_event_union_query_from_db(event_uuid: uuid_pkg.UUID,
+                                                       gov_structure_uuid: uuid_pkg.UUID) -> CompoundSelect:
     """
-    The function that returns the list of all users who are subscribed to the event,
+    The function that returns the request to receive users who are subscribed to the event,
     including those who are subscribed to the government structure that hosts this event
     """
 
@@ -48,7 +48,22 @@ async def receive_subs_to_event_from_db(event_uuid: uuid_pkg.UUID,
         .join(GovStructureSubscription, GovStructureSubscription.user_id == User.id) \
         .where(GovStructureSubscription.gov_structure_uuid == gov_structure_uuid)
 
-    query = users_sfp.paginate(union(event_subs_query, gov_structure_subs_query))
-    query = users_sfp.sort(users_sfp.filter(query))
+    return union(event_subs_query, gov_structure_subs_query)
+
+
+async def receive_subs_to_event_from_db(event_uuid: uuid_pkg.UUID,
+                                        gov_structure_uuid: uuid_pkg.UUID,
+                                        users_sfp: SortingFilteringPaging | None = None) -> list[UserRead]:
+    """
+    The function that returns the list of all users who are subscribed to the event,
+    including those who are subscribed to the government structure that hosts this event
+    """
+
+    query = create_receiving_subs_to_event_union_query_from_db(event_uuid, gov_structure_uuid)
+
+    if users_sfp is not None:
+        query = users_sfp.paginate(query)
+        query = users_sfp.sort(users_sfp.filter(query))  # type: ignore
+
     query = select(User).from_statement(query)
     return (await execute_db_query(query)).scalars().fetchall()

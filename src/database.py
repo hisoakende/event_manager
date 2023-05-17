@@ -7,7 +7,7 @@ engine: AsyncEngine = None  # type: ignore
 Session: sessionmaker = None  # type: ignore
 
 
-def db_startup() -> None:
+def db_start_up() -> None:
     """The function that processes the start of the database interaction"""
 
     global engine, Session
@@ -15,7 +15,7 @@ def db_startup() -> None:
     Session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
-async def db_shutdown() -> None:
+async def db_shut_down() -> None:
     """The function that processes the stop of the database interaction"""
 
     await engine.dispose()

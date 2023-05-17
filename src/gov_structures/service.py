@@ -9,13 +9,15 @@ from src.users.models import User
 
 
 async def receive_subs_to_gov_structure_from_db(gov_structure_uuid: uuid_pkg.UUID,
-                                                users_sfp: SortingFilteringPaging) -> list[User]:
+                                                users_sfp: SortingFilteringPaging | None = None) -> list[User]:
     """The function that executes the query to get subscribers to the government structure"""
 
     query = select(User) \
         .join(GovStructureSubscription, GovStructureSubscription.user_id == User.id) \
         .where(GovStructureSubscription.gov_structure_uuid == gov_structure_uuid)
 
-    query = users_sfp.sort(users_sfp.filter(query))
-    query = users_sfp.paginate(query)
+    if users_sfp is not None:
+        query = users_sfp.sort(users_sfp.filter(query))
+        query = users_sfp.paginate(query)
+
     return (await execute_db_query(query)).scalars().fetchall()

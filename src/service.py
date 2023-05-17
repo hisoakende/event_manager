@@ -1,5 +1,6 @@
 from typing import Any, TypeVar
 
+import aiosmtplib
 from fastapi_filter.contrib.sqlalchemy import Filter
 from sqlalchemy import select, update, delete
 from sqlalchemy.engine import Result
@@ -7,9 +8,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.elements import BinaryExpression
 from sqlmodel import SQLModel
 
+import src
 from src import database, config
 from src.redis_ import redis_engine
 from src.sfp import SortingFilteringPaging
+from src.utils import EmailMessage
 
 
 async def execute_db_query(query: Any) -> Result:
@@ -80,3 +83,11 @@ def is_user_in_blacklist(user_id: int) -> bool:
     """The function that checks if the user is blacklisted"""
 
     return redis_engine.sismember(config.USERS_BLACKLIST_NAME, user_id)
+
+
+async def send_email(message: EmailMessage) -> None:
+    """The function that sends email"""
+
+    async with aiosmtplib.SMTP(hostname=src.config.EMAIL_HOST, port=src.config.EMAIL_PORT) as server:
+        await server.login(src.config.EMAIL_LOCAL_ADDRESS, src.config.EMAIL_PASSWORD)
+        await server.send_message(message.create())

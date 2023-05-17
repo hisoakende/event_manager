@@ -6,7 +6,7 @@ import src.auth.router
 import src.events.router
 import src.gov_structures.router
 import src.users.router
-from src.database import db_startup, db_shutdown
+from src.database import db_start_up, db_shut_down
 
 app = FastAPI(
     title='event_manager'
@@ -29,14 +29,14 @@ def authjwt_exception_handler(request: Request, exc: AuthJWTException) -> JSONRe
 
 
 @app.on_event('startup')
-def startup() -> None:
+async def start_up() -> None:
     """The function that processes the start of the application"""
 
-    db_startup()
+    db_start_up()
 
 
 @app.on_event('shutdown')
-async def shutdown() -> None:
+async def shut_down() -> None:
     """The function that processes the stop of the application"""
 
-    await db_shutdown()
+    await db_shut_down()
