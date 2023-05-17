@@ -14,15 +14,14 @@ from src.redis_ import redis_engine
 from src.sfp import SortingFilteringPaging
 from src.utils import EmailMessage
 
+SQLModelSubClass = TypeVar('SQLModelSubClass', bound=SQLModel)
+
 
 async def execute_db_query(query: Any) -> Result:
     """The function that executes the given query to db"""
 
     async with database.Session() as session, session.begin():
         return await session.execute(query)
-
-
-SQLModelSubClass = TypeVar('SQLModelSubClass', bound=SQLModel)
 
 
 async def create_model(model: SQLModelSubClass) -> None:
@@ -44,6 +43,7 @@ async def receive_models_by_sfp_or_filter(model_type: type[SQLModelSubClass],
     query = model_sfp_or_filter.sort(model_sfp_or_filter.filter(select(model_type)))
     if isinstance(model_sfp_or_filter, SortingFilteringPaging):
         query = model_sfp_or_filter.paginate(query)
+
     return (await execute_db_query(query)).scalars().fetchall()
 
 

@@ -19,7 +19,7 @@ class OneDayBeforeEmailMessage(EmailMessage):
                f'состоится событие "{self.event.name}"'
 
 
-class OneWeekEmailBefore(EmailMessage):
+class OneWeekBeforeEmailBefore(EmailMessage):
     """The message that is sent the week before the event"""
 
     def create_payload(self) -> str:

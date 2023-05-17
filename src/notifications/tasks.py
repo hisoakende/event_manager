@@ -4,7 +4,6 @@ from typing import Any
 from celery import Task
 from sqlalchemy import select
 
-import src.celery_
 import src.config
 from src import database
 from src.events.models import Event
@@ -43,10 +42,10 @@ class EmailNotificationsSender(Task):
         """The method that starts when the event is processed"""
 
         loop = asyncio.get_event_loop()
+
         self.event = loop.run_until_complete(receive_model(Event, Event.uuid == event_uuid))  # type: ignore
+        if self.event is None:
+            return
+
         message_class = EmailMessage.messages_classes[message_class_name]
-
         loop.run_until_complete(self.send_notifications(message_class, **kwargs))
-
-
-EmailNotificationsSender = src.celery_.app.register_task(EmailNotificationsSender())  # type: ignore

@@ -15,3 +15,5 @@ EMAIL_PASSWORD = 'aoubnsgsddrgsnnt'
 EMAIL_LOCAL_ADDRESS = 'event.manager.notifications@gmail.com'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
+
+TIMEZONE = 'Europe/Moscow'
