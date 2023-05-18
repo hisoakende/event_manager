@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 from typing import Any
 
 from celery import Task
@@ -38,14 +39,18 @@ class EmailNotificationsSender(Task):
                 coroutines = [self.send_notification(user, message_class, **kwargs) for user in partition]
                 await asyncio.gather(*coroutines, return_exceptions=True)
 
-    def run(self, event_uuid: str, message_class_name: str, **kwargs: Any) -> None:
+    def run(self, event: str | dict[str, Any], message_class_name: str,
+            datetime_: datetime.datetime | None = None, **kwargs: Any) -> None:
         """The method that starts when the event is processed"""
 
         loop = asyncio.get_event_loop()
+        if isinstance(event, dict):
+            self.event = Event(**event)
 
-        self.event = loop.run_until_complete(receive_model(Event, Event.uuid == event_uuid))  # type: ignore
-        if self.event is None:
-            return
+        else:
+            self.event = loop.run_until_complete(receive_model(Event, Event.uuid == event))  # type: ignore
+            if self.event is None or self.event.datetime != datetime_:
+                return
 
         message_class = EmailMessage.messages_classes[message_class_name]
         loop.run_until_complete(self.send_notifications(message_class, **kwargs))

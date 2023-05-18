@@ -43,5 +43,7 @@ def schedule_notifications_for_event(event: Event, message_class: type[EmailMess
 
     notifications_datetime = event.datetime - timedelta
     countdown = get_countdown(datetime_, notifications_datetime)
-    src.notifications.celery_.EmailNotificationsSender.apply_async(args=(event.uuid, message_class.__name__),
-                                                                   countdown=countdown)
+    src.notifications.celery_.EmailNotificationsSender.apply_async(
+        args=(event.uuid, message_class.__name__, event.datetime),
+        countdown=countdown
+    )

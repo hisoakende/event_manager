@@ -9,7 +9,7 @@ from celery.signals import worker_shutdown, worker_init
 import src.config
 from src.database import db_start_up, db_shut_down
 from src.notifications import tasks, config
-from src.notifications.email_messages import FiveHoursBeforeEmailMessage, OneWeekBeforeEmailBefore, \
+from src.notifications.email_messages import FiveHoursBeforeEmailMessage, OneWeekBeforeEmailMessage, \
     OneDayBeforeEmailMessage
 from src.notifications.service import receive_events_that_in_few_days_time, receive_events_for_today_and_tomorrow, \
     schedule_notifications_for_event
@@ -31,7 +31,7 @@ def schedule_notifications() -> None:
     events_in_one_day = loop.run_until_complete(receive_events_that_in_few_days_time(1, now))
 
     for event in events_in_week:
-        schedule_notifications_for_event(event, OneWeekBeforeEmailBefore, now, datetime.timedelta(days=7))
+        schedule_notifications_for_event(event, OneWeekBeforeEmailMessage, now, datetime.timedelta(days=7))
 
     for event in events_in_one_day:
         schedule_notifications_for_event(event, OneDayBeforeEmailMessage, now, datetime.timedelta(days=1))
@@ -73,4 +73,4 @@ def shut_down(**kwargs: Any) -> None:
     loop.run_until_complete(db_shut_down())
 
 
-EmailNotificationsSender = app.register_task(tasks.EmailNotificationsSender())  # type: ignore
+EmailNotificationsSender = app.register_task(tasks.EmailNotificationsSender())

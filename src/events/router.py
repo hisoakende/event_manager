@@ -4,12 +4,13 @@ from typing import Annotated
 from asyncpg import ForeignKeyViolationError, UniqueViolationError
 from fastapi import APIRouter, status, Depends, HTTPException
 
-from src import config
 from src.dependencies import authorize_user
 from src.events.models import EventCreate, Event, EventRead, EventUpdate, EventSubscription
 from src.events.service import does_user_is_sub_to_event_by_sub_to_gov_structure, receive_subs_to_event_from_db
 from src.events.sfp import EventsSFP
 from src.gov_structures.models import GovStructure
+from src.notifications.celery_ import EmailNotificationsSender
+from src.notifications.email_messages import EventChangedEmailMessage
 from src.service import create_model, receive_model, update_models, delete_models, receive_models_by_sfp_or_filter
 from src.sfp import UsersSFP
 from src.users.models import UserRead
@@ -62,19 +63,29 @@ async def receive_event(uuid: uuid_pkg.UUID) -> EventRead:
 async def update_event(uuid: uuid_pkg.UUID, event_changes: EventUpdate) -> EventRead:
     """The view that processes updating the event"""
 
+    event_without_changes = await receive_model(Event, Event.uuid == uuid)  # type: ignore
+    if event_without_changes is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
     try:
-        is_updated = await update_models(Event, event_changes, Event.uuid == uuid)  # type: ignore
+        await update_models(Event, event_changes, Event.uuid == uuid)  # type: ignore
     except ForeignKeyViolationError:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                             detail=[{'loc': ['body', 'gov_structure_uuid'],
                                      'msg': 'there is no government structure with such a uuid',
                                      'type': 'value_error'}])
 
-    if not is_updated:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    event_changes = event_changes.dict(exclude_unset=True)
+    event_with_changes = Event(**(event_without_changes.dict() | event_changes))
+    event_with_changes.gov_structure = event_without_changes.gov_structure
 
-    event = await receive_model(Event, Event.uuid == uuid)  # type: ignore
-    return EventRead.from_orm(event)
+    event_changes = {k: v for k, v in event_changes.items() if getattr(event_without_changes, k) != v}
+    if 'address' in event_changes or 'datetime' in event_changes:
+        EmailNotificationsSender.apply_async(
+            args=(event_without_changes.dict(), EventChangedEmailMessage.__name__),
+            kwargs={'event_changes': event_changes})
+
+    return EventRead.from_orm(event_with_changes)
 
 
 @events_router.delete('/{uuid}/', status_code=status.HTTP_204_NO_CONTENT,

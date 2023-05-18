@@ -54,8 +54,6 @@ class EventUpdate(EventBase, ChangesAreNotEmptyMixin):
 
     name: str | None = None  # type: ignore
     datetime: datetime_pkg.datetime | None = None  # type: ignore
-    gov_structure_uuid: uuid_pkg.UUID | None = Field(
-        sa_column=Column(UUID(as_uuid=True), ForeignKey('govstructure.uuid', ondelete='CASCADE')), default=None)
 
 
 class EventSubscription(SQLModel, table=True):

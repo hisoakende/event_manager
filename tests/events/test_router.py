@@ -213,21 +213,6 @@ class TestUpdateEvent(DBProcessedIsolatedAsyncTestCase):
             event_name = (await session.scalar(select(Event).where(Event.uuid == self.event_uuid))).name
         self.assertEqual(event_name, event_name_expected)
 
-    async def test_gov_structure_doesnt_exist(self) -> None:
-        token = AuthJWT().create_access_token(subject=350, user_claims={'is_government_worker': True})
-        with TestClient(app=app) as client:
-            response = client.patch(f'/events/{self.event_uuid}/', headers={'Authorization': f'Bearer {token}'},
-                                    json={'gov_structure_uuid': str(uuid_pkg.uuid4())})
-
-        self.assertEqual(response.status_code, 422)
-        self.assertEqual(response.json(), {'detail': [{'loc': ['body', 'gov_structure_uuid'],
-                                                       'msg': 'there is no government structure with such a uuid',
-                                                       'type': 'value_error'}]})
-
-        async with self.Session() as session:
-            event = await session.scalar(select(Event).where(Event.uuid == self.event_uuid))
-        self.assertEqual(event.gov_structure_uuid, self.gov_structure_uuid)
-
     async def test_event_doesnt_exist(self) -> None:
         uuid = uuid_pkg.uuid4()
         token = AuthJWT().create_access_token(subject=400, user_claims={'is_government_worker': True})
