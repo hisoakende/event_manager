@@ -2,18 +2,18 @@ import os
 
 DATABASE_USER = os.getenv('DATABASE_USER')
 DATABASE_HOST = os.getenv('DATABASE_HOST')
-DATABASE_PORT = 5432
+DATABASE_PORT = os.getenv('DATABASE_PORT')
 DATABASE_NAME = os.getenv('DATABASE_NAME')
 DATABASE_URL = f'postgresql+asyncpg://{DATABASE_USER}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}'
 DATABASE_CURSOR_SIZE = 10000
 
 REDIS_HOST = os.getenv('REDIS_HOST')
-REDIS_PORT = 6379
-USERS_BLACKLIST_NAME = 'users_black_list'
+REDIS_PORT = os.getenv('REDIS_PORT')
+USERS_BLACKLIST_NAME = 'users_blacklist'
 
-EMAIL_PASSWORD = 'aoubnsgsddrgsnnt'
-EMAIL_LOCAL_ADDRESS = 'event.manager.notifications@gmail.com'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
+EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+EMAIL_LOCAL_ADDRESS = os.getenv('EMAIL_LOCAL_ADDRESS=')
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_PORT = os.getenv('EMAIL_PORT')
 
 TIMEZONE = 'Europe/Moscow'

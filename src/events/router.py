@@ -75,15 +75,15 @@ async def update_event(uuid: uuid_pkg.UUID, event_changes: EventUpdate) -> Event
                                      'msg': 'there is no government structure with such a uuid',
                                      'type': 'value_error'}])
 
-    event_changes = event_changes.dict(exclude_unset=True)
-    event_with_changes = Event(**(event_without_changes.dict() | event_changes))
+    event_changes_dict = event_changes.dict(exclude_unset=True)
+    event_with_changes = Event(**(event_without_changes.dict() | event_changes_dict))
     event_with_changes.gov_structure = event_without_changes.gov_structure
 
-    event_changes = {k: v for k, v in event_changes.items() if getattr(event_without_changes, k) != v}
-    if 'address' in event_changes or 'datetime' in event_changes:
+    event_changes_dict = {k: v for k, v in event_changes_dict.items() if getattr(event_without_changes, k) != v}
+    if 'address' in event_changes_dict or 'datetime' in event_changes_dict:
         EmailNotificationsSender.apply_async(
-            args=(event_without_changes.dict(), EventChangedEmailMessage.__name__),
-            kwargs={'event_changes': event_changes})
+            args=(event_without_changes.json(), EventChangedEmailMessage.__name__),
+            kwargs={'is_json': True, 'event_changes': event_changes_dict})
 
     return EventRead.from_orm(event_with_changes)
 

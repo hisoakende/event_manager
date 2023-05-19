@@ -13,7 +13,7 @@ class GovStructureBase(SQLModel):
 
     name: str
     description: str | None = Field(sa_column=Column(TEXT), default=None)
-    email: EmailStr | None = None
+    email: EmailStr
     address: str | None = None
 
 

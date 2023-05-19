@@ -2,13 +2,16 @@ import uuid as uuid_pkg
 from typing import Annotated
 
 from asyncpg import UniqueViolationError, ForeignKeyViolationError
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
+from starlette.background import BackgroundTasks
 
 from src.dependencies import authorize_user
+from src.gov_structures.email_messages import ConfirmGovStructureEmailEmailMessage
 from src.gov_structures.models import GovStructure, GovStructureCreate, GovStructureUpdate, GovStructureSubscription
 from src.gov_structures.service import receive_subs_to_gov_structure_from_db
 from src.gov_structures.sfp import GovStructureSFP
-from src.service import create_model, receive_model, delete_models, update_models, receive_models_by_sfp_or_filter
+from src.service import create_model, receive_model, delete_models, update_models, receive_models_by_sfp_or_filter, \
+    receive_unconfirmed_email_data, set_unconfirmed_email_data, send_email, delete_unconfirmed_email_data
 from src.sfp import UsersSFP
 from src.users.models import UserRead
 
@@ -18,14 +21,21 @@ gov_structures_router = APIRouter(
 )
 
 
-@gov_structures_router.post('/', status_code=status.HTTP_201_CREATED,
+@gov_structures_router.post('/', status_code=status.HTTP_204_NO_CONTENT,
                             dependencies=[Depends(authorize_user(is_government_worker=True))])
-async def create_gov_structure(gov_structure_data: GovStructureCreate) -> GovStructure:
-    """The view that processes creation the government structure"""
+async def create_gov_structure(gov_structure_data: GovStructureCreate,
+                               background_task: BackgroundTasks) -> None:
+    """
+    The view that processes creation the government structure
+
+    Sends email message with confirmation uuid to confirm email and to create government structure
+    """
 
     gov_structure = GovStructure.from_orm(gov_structure_data)
-    await create_model(gov_structure)
-    return gov_structure
+
+    confirmation_uuid = uuid_pkg.uuid4()
+    set_unconfirmed_email_data(confirmation_uuid, gov_structure)
+    background_task.add_task(send_email, ConfirmGovStructureEmailEmailMessage(gov_structure, confirmation_uuid))
 
 
 @gov_structures_router.get('/', dependencies=[Depends(authorize_user())])
@@ -109,3 +119,20 @@ async def receive_subscribers_to_gov_structure(
 
     users = await receive_subs_to_gov_structure_from_db(uuid, users_sfp)
     return [UserRead.from_orm(user) for user in users]
+
+
+@gov_structures_router.post('/email-confirmation/', status_code=status.HTTP_201_CREATED,
+                            dependencies=[Depends(authorize_user(is_government_worker=True))])
+async def confirm_email(confirmation_uuid: Annotated[uuid_pkg.UUID, Body(embed=True)]) -> GovStructure:
+    """The view that processes email confirmation and, if successful, creates the government structure"""
+
+    gov_structure = receive_unconfirmed_email_data(confirmation_uuid, GovStructure)
+    if gov_structure is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail=[{'loc': ['body', 'confirmation_uuid'],
+                                     'msg': 'invalid value',
+                                     'type': 'value_error'}])
+    delete_unconfirmed_email_data(confirmation_uuid, GovStructure)
+
+    await create_model(gov_structure)
+    return gov_structure

@@ -9,7 +9,6 @@ from sqlmodel import SQLModel
 import src.config
 
 if typing.TYPE_CHECKING:
-    from src.events.models import Event
     from src.users.models import User
 
 
@@ -31,17 +30,13 @@ class ChangesAreNotEmptyMixin(SQLModel):
 class EmailMessage(ABC):
     """The base class that processes the creation of the email"""
 
-    messages_classes: dict[str, type['EmailMessage']] = {}
-
-    def __init__(self, event: 'Event', user: 'User', subject: str = 'Уведомление с событии!') -> None:
-        self.event = event
+    def __init__(self, user: typing.Optional['User'], subject: str) -> None:
         self.user = user
         self.subject = subject
 
-    def __init_subclass__(cls) -> None:
-        EmailMessage.messages_classes[cls.__name__] = cls
-
     def create_welcome_message(self) -> str:
+        if self.user is None:
+            return f'Здравствуйте!\n'
         return f'Здравствуйте, {self.user.first_name} {self.user.patronymic}!\n'
 
     @abstractmethod
@@ -57,5 +52,7 @@ class EmailMessage(ABC):
         message = MIMEText(payload)
         message['Subject'] = self.subject
         message['From'] = src.config.EMAIL_LOCAL_ADDRESS
-        message['To'] = self.user.email
+        if self.user is not None:
+            message['To'] = self.user.email
+
         return message

@@ -1,3 +1,5 @@
+import json
+import uuid as uuid_pkg
 from typing import Any, TypeVar
 
 import aiosmtplib
@@ -91,3 +93,27 @@ async def send_email(message: EmailMessage) -> None:
     async with aiosmtplib.SMTP(hostname=src.config.EMAIL_HOST, port=src.config.EMAIL_PORT) as server:
         await server.login(src.config.EMAIL_LOCAL_ADDRESS, src.config.EMAIL_PASSWORD)
         await server.send_message(message.create())
+
+
+def set_unconfirmed_email_data(confirmation_uuid: uuid_pkg.UUID, data: SQLModelSubClass) -> None:
+    """"""
+
+    redis_engine.set(f'{confirmation_uuid}-{data.__class__.__name__}', data.json(), ex=1800)
+
+
+def receive_unconfirmed_email_data(confirmation_uuid: uuid_pkg.UUID,
+                                   data_class: type[SQLModelSubClass]) -> SQLModelSubClass | None:
+    """"""
+
+    redis_data = redis_engine.get(f'{confirmation_uuid}-{data_class.__name__}')
+    if redis_data is None:
+        return None
+
+    return data_class(**json.loads(redis_data))
+
+
+def delete_unconfirmed_email_data(confirmation_uuid: uuid_pkg.UUID,
+                                  data_class: type[SQLModelSubClass]) -> None:
+    """"""
+
+    redis_engine.delete(f'{confirmation_uuid}-{data_class.__name__}')
