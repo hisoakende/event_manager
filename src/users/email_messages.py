@@ -14,7 +14,7 @@ class ConfirmUserEmailEmailMessage(EmailMessage):
     def create_payload(self) -> str:
         return f'Ваш код подтверждения:\n' \
                f'{self.confirmation_uuid}\n' \
-               f'Код действителен в течение 30 минут'
+               f'Код действителен в течение 30 минут.'
 
 
 class RecoveryPasswordEmailMessage(EmailMessage):
@@ -27,4 +27,4 @@ class RecoveryPasswordEmailMessage(EmailMessage):
     def create_payload(self) -> str:
         return f'Ваша ссылка для восстановления пароля:\n' \
                f'{self.recovery_url}\n' \
-               f'Cсылка действительна в течение 30 минут'
+               f'Cсылка действительна в течение 30 минут.'

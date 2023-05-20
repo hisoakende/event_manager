@@ -1,6 +1,6 @@
 import asyncio
-import datetime
 import json
+from datetime import datetime
 from typing import Any
 
 from celery import Task
@@ -52,7 +52,9 @@ class EmailNotificationsSender(Task):
 
         else:
             self.event = loop.run_until_complete(receive_model(Event, Event.uuid == event))  # type: ignore
-            if self.event is None or (datetime_ and self.event.datetime != datetime.datetime.fromisoformat(datetime_)):
+            if any(((datetime_ and self.event.datetime != datetime.fromisoformat(datetime_),
+                     self.event is None,
+                     not self.event.is_active))):
                 return
 
         message_class = EventNotificationEmailMessage.messages_classes[message_class_name]

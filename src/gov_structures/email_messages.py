@@ -16,7 +16,7 @@ class ConfirmGovStructureEmailEmailMessage(EmailMessage):
     def create_payload(self) -> str:
         return f'Код подтверждения для правительственной структуры "{self.gov_structure.name}":\n' \
                f'{self.confirmation_uuid}\n' \
-               f'Код действителен в течение 30 минут'
+               f'Код действителен в течение 30 минут.'
 
     def create(self) -> MIMEText:
         message = super().create()

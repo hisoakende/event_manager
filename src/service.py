@@ -4,6 +4,7 @@ from typing import Any, TypeVar
 
 import aiosmtplib
 from fastapi_filter.contrib.sqlalchemy import Filter
+from pydantic import BaseModel
 from sqlalchemy import select, update, delete
 from sqlalchemy.engine import Result
 from sqlalchemy.exc import IntegrityError
@@ -56,7 +57,7 @@ async def receive_model(model_type: type[SQLModelSubClass], *conditions: BinaryE
     return (await execute_db_query(query)).scalar()
 
 
-async def update_models(model_type: type[SQLModelSubClass], data: SQLModel,
+async def update_models(model_type: type[SQLModelSubClass], data: BaseModel,
                         *conditions: BinaryExpression) -> int | None:
     """
     The function that updates models and returns the number of updated rows
@@ -82,7 +83,7 @@ async def delete_models(model_type: type[SQLModelSubClass], *conditions: BinaryE
 
 
 def is_user_in_blacklist(user_id: int) -> bool:
-    """The function that checks if the user is blacklisted"""
+    """The function that checks if the user is blacklisted in redis"""
 
     return redis_engine.sismember(config.USERS_BLACKLIST_NAME, user_id)
 
@@ -96,14 +97,14 @@ async def send_email(message: EmailMessage) -> None:
 
 
 def set_unconfirmed_email_data(confirmation_uuid: uuid_pkg.UUID, data: SQLModelSubClass) -> None:
-    """"""
+    """The function that saves data with unconfirmed email in redis"""
 
     redis_engine.set(f'{confirmation_uuid}-{data.__class__.__name__}', data.json(), ex=1800)
 
 
 def receive_unconfirmed_email_data(confirmation_uuid: uuid_pkg.UUID,
                                    data_class: type[SQLModelSubClass]) -> SQLModelSubClass | None:
-    """"""
+    """The function that returns data with unconfirmed email from redis"""
 
     redis_data = redis_engine.get(f'{confirmation_uuid}-{data_class.__name__}')
     if redis_data is None:
@@ -114,6 +115,6 @@ def receive_unconfirmed_email_data(confirmation_uuid: uuid_pkg.UUID,
 
 def delete_unconfirmed_email_data(confirmation_uuid: uuid_pkg.UUID,
                                   data_class: type[SQLModelSubClass]) -> None:
-    """"""
+    """The function that deletes data with unconfirmed email from redis"""
 
     redis_engine.delete(f'{confirmation_uuid}-{data_class.__name__}')

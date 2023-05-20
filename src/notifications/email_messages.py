@@ -26,7 +26,7 @@ class FiveHoursBeforeEmailMessage(EventNotificationEmailMessage):
     def create_payload(self) -> str:
         return f'Сообщаем Вам, что менее, чем через пять часов ' \
                f'({self.event.datetime.strftime("%d-%m-%Y, %H:%M")}), ' \
-               f'состоится событие "{self.event.name}"'
+               f'состоится событие "{self.event.name}".'
 
 
 class OneDayBeforeEmailMessage(EventNotificationEmailMessage):
@@ -35,7 +35,7 @@ class OneDayBeforeEmailMessage(EventNotificationEmailMessage):
     def create_payload(self) -> str:
         return f'Сообщаем Вам, что менее, чем через одни сутки ' \
                f'({self.event.datetime.strftime("%d-%m-%Y, %H:%M")}), ' \
-               f'состоится событие "{self.event.name}"'
+               f'состоится событие "{self.event.name}".'
 
 
 class OneWeekBeforeEmailMessage(EventNotificationEmailMessage):
@@ -44,7 +44,7 @@ class OneWeekBeforeEmailMessage(EventNotificationEmailMessage):
     def create_payload(self) -> str:
         return f'Сообщаем Вам, что уже через неделю ' \
                f'({self.event.datetime.strftime("%d-%m-%Y, %H:%M")}), ' \
-               f'состоится событие "{self.event.name}"'
+               f'состоится событие "{self.event.name}".'
 
 
 class EventChangedEmailMessage(EventNotificationEmailMessage):
@@ -72,6 +72,24 @@ class EventChangedEmailMessage(EventNotificationEmailMessage):
         return changes
 
     def create_payload(self) -> str:
-        return f'Сообщаем вам, что данные события "{self.event.name}" ' \
+        return f'Сообщаем Вам, что данные события "{self.event.name}" ' \
                f'({self.event.datetime.strftime("%d-%m-%Y, %H:%M")}) ' \
                f'изменились. Вот измененные данные:\n' + self.create_changes()
+
+
+class EventCanceledEmailMessage(EventNotificationEmailMessage):
+    """The message that is sent when the event is canceled"""
+
+    def create_payload(self) -> str:
+        return f'Сообщаем Вам, что событие "{self.event.name}" ' \
+               f'({self.event.datetime.strftime("%d-%m-%Y, %H:%M")}) ' \
+               f'отменено. Если будет принято решение о проведение этого события, ' \
+               f'мы Вам сообщим.'
+
+
+class HostingEventEmailMessage(EventNotificationEmailMessage):
+    """The message that is sent when the canceled event is held"""
+
+    def create_payload(self) -> str:
+        return f'Сообщаем Вам, что отмененное событие "{self.event.name}" ' \
+               f'будет проведено {self.event.datetime.strftime("%d-%m-%Y в %H:%M")}.'

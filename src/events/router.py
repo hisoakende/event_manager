@@ -5,12 +5,13 @@ from asyncpg import ForeignKeyViolationError, UniqueViolationError
 from fastapi import APIRouter, status, Depends, HTTPException
 
 from src.dependencies import authorize_user
-from src.events.models import EventCreate, Event, EventRead, EventUpdate, EventSubscription
+from src.events.models import EventCreate, Event, EventRead, EventUpdate, EventSubscription, EventActivityChangeScheme
 from src.events.service import does_user_is_sub_to_event_by_sub_to_gov_structure, receive_subs_to_event_from_db
 from src.events.sfp import EventsSFP
 from src.gov_structures.models import GovStructure
 from src.notifications.celery_ import EmailNotificationsSender
-from src.notifications.email_messages import EventChangedEmailMessage
+from src.notifications.email_messages import EventChangedEmailMessage, EventCanceledEmailMessage, \
+    HostingEventEmailMessage
 from src.service import create_model, receive_model, update_models, delete_models, receive_models_by_sfp_or_filter
 from src.sfp import UsersSFP
 from src.users.models import UserRead
@@ -86,6 +87,27 @@ async def update_event(uuid: uuid_pkg.UUID, event_changes: EventUpdate) -> Event
             kwargs={'is_json': True, 'event_changes': event_changes_dict})
 
     return EventRead.from_orm(event_with_changes)
+
+
+@events_router.post('/{uuid}/activity-change/', status_code=status.HTTP_204_NO_CONTENT,
+                    dependencies=[Depends(authorize_user(is_government_worker=True))])
+async def change_event_activity(uuid: uuid_pkg.UUID, activity_changing: EventActivityChangeScheme) -> None:
+    """The view that processes the event activity change"""
+
+    event = await receive_model(Event, Event.uuid == uuid)  # type: ignore
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    if event.is_active and not activity_changing.is_active:
+        EmailNotificationsSender.apply_async(args=(event.json(), EventCanceledEmailMessage.__name__,),
+                                             kwargs={'is_json': True})
+
+    elif not event.is_active and activity_changing.is_active:
+        EmailNotificationsSender.apply_async(args=(event.json(), HostingEventEmailMessage.__name__,),
+                                             kwargs={'is_json': True})
+
+    if event.is_active != activity_changing.is_active:
+        await update_models(Event, activity_changing, Event.uuid == uuid)  # type: ignore
 
 
 @events_router.delete('/{uuid}/', status_code=status.HTTP_204_NO_CONTENT,

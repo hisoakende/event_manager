@@ -1,6 +1,7 @@
 import datetime as datetime_pkg
 import uuid as uuid_pkg
 
+from pydantic import BaseModel
 from sqlalchemy import Column, TEXT, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import SQLModel, Field, Relationship
@@ -37,6 +38,7 @@ class Event(EventBaseWithUUID, EventBaseWithGovStructureUUID, table=True):
     gov_structure: GovStructure = Relationship(
         sa_relationship_kwargs={'primaryjoin': 'Event.gov_structure_uuid == GovStructure.uuid',
                                 'lazy': 'joined'})
+    is_active: bool = True
 
 
 class EventCreate(EventBaseWithGovStructureUUID):
@@ -47,6 +49,7 @@ class EventRead(EventBaseWithUUID):
     """The model that represents the fields which will be returned by API"""
 
     gov_structure: GovStructure
+    is_active: bool = True
 
 
 class EventUpdate(EventBase, ChangesAreNotEmptyMixin):
@@ -54,6 +57,12 @@ class EventUpdate(EventBase, ChangesAreNotEmptyMixin):
 
     name: str | None = None  # type: ignore
     datetime: datetime_pkg.datetime | None = None  # type: ignore
+
+
+class EventActivityChangeScheme(BaseModel):
+    """The schema that is needed to change the activity of the event"""
+
+    is_active: bool
 
 
 class EventSubscription(SQLModel, table=True):

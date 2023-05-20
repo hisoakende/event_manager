@@ -10,7 +10,7 @@ from src.sfp import SortingFilteringPaging
 class EventsSFP(SortingFilteringPaging):
     """The class that processes sorting, filtering and pagination of events"""
 
-    order_by: list[str] | None = ['name']
+    order_by: list[str] | None = ['name', 'is_active']
 
     datetime__gte: datetime.datetime | None = Field(alias='starting_from')
     datetime__lte: datetime.datetime | None = Field(alias='ending_in')
