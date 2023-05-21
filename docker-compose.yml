@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: postgres:15.2
+    environment:
+      POSTGRES_DB: "event_manager"
+      POSTGRES_HOST_AUTH_METHOD: "trust"
+    ports:
+      - "5433:5432"
+
+  redis:
+    image: redis:7.0.3
+    ports:
+      - "6380:6379"
+
+  api:
+    build: .
+    ports:
+      - "80:80"
+    depends_on:
+      - db
+      - redis
+    environment:
+      DATABASE_USER: "postgres"
+      DATABASE_HOST: "db"
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: "event_manager"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      EMAIL_PASSWORD: "aoubnsgsddrgsnnt"
+      EMAIL_LOCAL_ADDRESS: "event.manager.notifications@gmail.com"
+      EMAIL_HOST: "smtp.gmail.com"
+      EMAIL_PORT: "587"
+      AUTHJWT_KEY: "somesalt"
+      HASH_ALGORITHM: "sha256"
+      GOVERNMENT_KEY: "mirea top"

@@ -13,7 +13,7 @@ class EventNotificationEmailMessage(EmailMessage, ABC):
     messages_classes: dict[str, type['EventNotificationEmailMessage']] = {}
 
     def __init__(self, event: 'Event', user: 'User') -> None:
-        super().__init__(user, 'Уведомление с событии!')
+        super().__init__(user, 'Уведомление o событии!')
         self.event = event
 
     def __init_subclass__(cls) -> None:

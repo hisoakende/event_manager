@@ -3,3 +3,4 @@ venv/
 .idea/
 .mypy_cache/
 .coverage
+celerybeat-schedule.db
