@@ -48,6 +48,7 @@ class TestAuthorizeUser(DBProcessedIsolatedAsyncTestCase):
 
         with self.assertRaises(HTTPException):
             await authorize_user()(self.authorise)
+        redis_engine.srem(config.TEST_USERS_BLACKLIST_NAME, 999)
 
     async def test_user_is_not_gov_worker(self) -> None:
         with self.assertRaises(HTTPException):

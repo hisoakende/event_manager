@@ -11,7 +11,7 @@ from src.database import db_start_up, db_shut_down
 from src.notifications import tasks, config
 from src.notifications.email_messages import FiveHoursBeforeEmailMessage, OneWeekBeforeEmailMessage, \
     OneDayBeforeEmailMessage
-from src.notifications.service import receive_events_that_in_few_days_time, receive_events_for_today_and_tomorrow, \
+from src.notifications.service import receive_events_that_in_few_days_time, receive_events_for_this_and_next_day, \
     schedule_notifications_for_event
 
 app = Celery(broker=config.BROKER_URL, include=['src.notifications.tasks'])
@@ -55,7 +55,7 @@ def schedule_notifications_on_start_up(**kwargs: Any) -> None:
 
     loop = asyncio.get_event_loop()
     now = datetime.datetime.now()
-    events = loop.run_until_complete(receive_events_for_today_and_tomorrow(now))
+    events = loop.run_until_complete(receive_events_for_this_and_next_day(now))
 
     for event in events:
         if event.datetime - datetime.datetime.now() > datetime.timedelta(hours=15):

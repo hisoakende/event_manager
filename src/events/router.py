@@ -68,13 +68,7 @@ async def update_event(uuid: uuid_pkg.UUID, event_changes: EventUpdate) -> Event
     if event_without_changes is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    try:
-        await update_models(Event, event_changes, Event.uuid == uuid)  # type: ignore
-    except ForeignKeyViolationError:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail=[{'loc': ['body', 'gov_structure_uuid'],
-                                     'msg': 'there is no government structure with such a uuid',
-                                     'type': 'value_error'}])
+    await update_models(Event, event_changes, Event.uuid == uuid)  # type: ignore
 
     event_changes_dict = event_changes.dict(exclude_unset=True)
     event_with_changes = Event(**(event_without_changes.dict() | event_changes_dict))

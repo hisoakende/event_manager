@@ -1,8 +1,9 @@
 import datetime
 import uuid as uuid_pkg
+from unittest.mock import patch
 
 from fastapi_jwt_auth import AuthJWT
-from sqlalchemy import insert, select, delete
+from sqlalchemy import insert, select, delete, update
 from starlette.testclient import TestClient
 
 from src.events.models import Event, EventSubscription
@@ -15,20 +16,23 @@ from tests.service import DBProcessedIsolatedAsyncTestCase
 class TestCreateEvent(DBProcessedIsolatedAsyncTestCase):
     test_endpoint = True
 
+    def setUp(self) -> None:
+        self.token = AuthJWT().create_access_token(subject=100, user_claims={'is_government_worker': True})
+
     async def test_successful_creating(self) -> None:
         uuid = uuid_pkg.uuid4()
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=uuid, name='gov structure',
+                                                              email='example@gmail.com'))
 
-        token = AuthJWT().create_access_token(subject=100, user_claims={'is_government_worker': True})
         with TestClient(app=app) as client:
-            response = client.post('/events/',
-                                   headers={'Authorization': f'Bearer {token}'},
+            response = client.post('/events/', headers={'Authorization': f'Bearer {self.token}'},
                                    json={'name': 'event',
                                          'datetime': '2020-01-01T00:00:00',
                                          'gov_structure_uuid': str(uuid)})
 
         expected_result = {
+            'is_active': True,
             'name': 'event',
             'description': None,
             'address': None,
@@ -36,7 +40,7 @@ class TestCreateEvent(DBProcessedIsolatedAsyncTestCase):
             'gov_structure': {
                 'name': 'gov structure',
                 'description': None,
-                'email': None,
+                'email': 'example@gmail.com',
                 'address': None,
                 'uuid': str(uuid)
             }
@@ -52,11 +56,10 @@ class TestCreateEvent(DBProcessedIsolatedAsyncTestCase):
             event = await session.scalar(select(Event).where(Event.uuid == event_uuid))
         self.assertIsNotNone(event)
 
-    async def test_defunct_state_structure(self) -> None:
-        token = AuthJWT().create_access_token(subject=150, user_claims={'is_government_worker': True})
+    async def test_defunct_government_structure(self) -> None:
         with TestClient(app=app) as client:
             response = client.post('/events/',
-                                   headers={'Authorization': f'Bearer {token}'},
+                                   headers={'Authorization': f'Bearer {self.token}'},
                                    json={'name': 'event',
                                          'datetime': '2020-01-01T00:00:00',
                                          'gov_structure_uuid': 'edcd54ea-1a50-46cf-b207-8d40d2357887'})
@@ -72,14 +75,15 @@ class TestReceiveEvents(DBProcessedIsolatedAsyncTestCase):
 
     async def test_receiving(self) -> None:
         uuid = uuid_pkg.uuid4()
-        datetime_ = datetime.datetime(year=2020, month=1, day=1)
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=uuid, name='gov structure',
+                                                              email='example@gmail.com'))
             await session.execute(insert(Event).values(uuid=uuid_pkg.uuid4(), name='event 1',
                                                        gov_structure_uuid=uuid,
-                                                       datetime=datetime_))
+                                                       datetime=datetime.datetime(year=2020, month=1, day=1)))
             await session.execute(insert(Event).values(uuid=uuid_pkg.uuid4(), name='event 2',
-                                                       gov_structure_uuid=uuid, datetime=datetime_))
+                                                       gov_structure_uuid=uuid,
+                                                       datetime=datetime.datetime(year=2020, month=1, day=1)))
 
         token = AuthJWT().create_access_token(subject=200, user_claims={'is_government_worker': True})
         with TestClient(app=app) as client:
@@ -87,6 +91,7 @@ class TestReceiveEvents(DBProcessedIsolatedAsyncTestCase):
 
         expected_result = [
             {
+                'is_active': True,
                 'name': 'event 1',
                 'description': None,
                 'address': None,
@@ -94,12 +99,13 @@ class TestReceiveEvents(DBProcessedIsolatedAsyncTestCase):
                 'gov_structure': {
                     'name': 'gov structure',
                     'description': None,
-                    'email': None,
+                    'email': 'example@gmail.com',
                     'address': None,
                     'uuid': str(uuid)
                 }
             },
             {
+                'is_active': True,
                 'name': 'event 2',
                 'description': None,
                 'address': None,
@@ -107,7 +113,7 @@ class TestReceiveEvents(DBProcessedIsolatedAsyncTestCase):
                 'gov_structure': {
                     'name': 'gov structure',
                     'description': None,
-                    'email': None,
+                    'email': 'example@gmail.com',
                     'address': None,
                     'uuid': str(uuid)
                 }
@@ -125,21 +131,24 @@ class TestReceiveEvents(DBProcessedIsolatedAsyncTestCase):
 class TestReceiveEvent(DBProcessedIsolatedAsyncTestCase):
     test_endpoint = True
 
+    def setUp(self) -> None:
+        self.token = AuthJWT().create_access_token(subject=250, user_claims={'is_government_worker': True})
+
     async def test_event_exist(self) -> None:
         gov_structure_uuid = uuid_pkg.uuid4()
         event_uuid = uuid_pkg.uuid4()
-        datetime_ = datetime.datetime(year=2020, month=1, day=1)
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure',
+                                                              email='example@gmail.com'))
             await session.execute(insert(Event).values(uuid=event_uuid, name='event',
                                                        gov_structure_uuid=gov_structure_uuid,
-                                                       datetime=datetime_))
+                                                       datetime=datetime.datetime(year=2020, month=1, day=1)))
 
-        token = AuthJWT().create_access_token(subject=250, user_claims={'is_government_worker': True})
         with TestClient(app=app) as client:
-            response = client.get(f'/events/{event_uuid}/', headers={'Authorization': f'Bearer {token}'})
+            response = client.get(f'/events/{event_uuid}/', headers={'Authorization': f'Bearer {self.token}'})
 
         expected_result = {
+            'is_active': True,
             'name': 'event',
             'description': None,
             'address': None,
@@ -148,7 +157,7 @@ class TestReceiveEvent(DBProcessedIsolatedAsyncTestCase):
             'gov_structure': {
                 'name': 'gov structure',
                 'description': None,
-                'email': None,
+                'email': 'example@gmail.com',
                 'address': None,
                 'uuid': str(gov_structure_uuid)
             }
@@ -159,9 +168,8 @@ class TestReceiveEvent(DBProcessedIsolatedAsyncTestCase):
 
     async def test_event_doesnt_exist(self) -> None:
         uuid = uuid_pkg.uuid4()
-        token = AuthJWT().create_access_token(subject=250, user_claims={'is_government_worker': True})
         with TestClient(app=app) as client:
-            response = client.get(f'/events/{uuid}/', headers={'Authorization': f'Bearer {token}'})
+            response = client.get(f'/events/{uuid}/', headers={'Authorization': f'Bearer {self.token}'})
 
         self.assertEqual(response.status_code, 404)
 
@@ -175,22 +183,23 @@ class TestUpdateEvent(DBProcessedIsolatedAsyncTestCase):
 
     async def asyncSetUp(self) -> None:
         await super().asyncSetUp()
+        self.token = AuthJWT().create_access_token(subject=300, user_claims={'is_government_worker': True})
         self.gov_structure_uuid = uuid_pkg.uuid4()
         self.event_uuid = uuid_pkg.uuid4()
-        self.datetime_ = datetime.datetime(year=2020, month=1, day=1)
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=self.gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=self.gov_structure_uuid, name='gov structure',
+                                                              email='example@gmail.com'))
             await session.execute(insert(Event).values(uuid=self.event_uuid, name='event',
                                                        gov_structure_uuid=self.gov_structure_uuid,
-                                                       datetime=self.datetime_))
+                                                       datetime=datetime.datetime(year=2020, month=1, day=1)))
 
     async def test_successful_updating(self) -> None:
-        token = AuthJWT().create_access_token(subject=300, user_claims={'is_government_worker': True})
         with TestClient(app=app) as client:
-            response = client.patch(f'/events/{self.event_uuid}/', headers={'Authorization': f'Bearer {token}'},
+            response = client.patch(f'/events/{self.event_uuid}/', headers={'Authorization': f'Bearer {self.token}'},
                                     json={'name': 'Измененное имя'})
 
         expected_result = {
+            'is_active': True,
             'name': 'Измененное имя',
             'description': None,
             'address': None,
@@ -199,7 +208,7 @@ class TestUpdateEvent(DBProcessedIsolatedAsyncTestCase):
             'gov_structure': {
                 'name': 'gov structure',
                 'description': None,
-                'email': None,
+                'email': 'example@gmail.com',
                 'address': None,
                 'uuid': str(self.gov_structure_uuid)
             }
@@ -213,11 +222,28 @@ class TestUpdateEvent(DBProcessedIsolatedAsyncTestCase):
             event_name = (await session.scalar(select(Event).where(Event.uuid == self.event_uuid))).name
         self.assertEqual(event_name, event_name_expected)
 
+    async def test_updating_datetime(self) -> None:
+        with patch('src.events.router.EmailNotificationsSender.apply_async') as mock, \
+                TestClient(app=app) as client:
+            response = client.patch(f'/events/{self.event_uuid}/', headers={'Authorization': f'Bearer {self.token}'},
+                                    json={'datetime': '2020-03-01T00:00:00'})
+
+        self.assertTrue(mock.called)
+        self.assertEqual(response.status_code, 200)
+
+    async def test_updating_address(self) -> None:
+        with patch('src.events.router.EmailNotificationsSender.apply_async') as mock, \
+                TestClient(app=app) as client:
+            response = client.patch(f'/events/{self.event_uuid}/', headers={'Authorization': f'Bearer {self.token}'},
+                                    json={'datetime': '2020-03-01T00:00:00'})
+
+        self.assertTrue(mock.called)
+        self.assertEqual(response.status_code, 200)
+
     async def test_event_doesnt_exist(self) -> None:
         uuid = uuid_pkg.uuid4()
-        token = AuthJWT().create_access_token(subject=400, user_claims={'is_government_worker': True})
         with TestClient(app=app) as client:
-            response = client.patch(f'/events/{uuid}/', headers={'Authorization': f'Bearer {token}'},
+            response = client.patch(f'/events/{uuid}/', headers={'Authorization': f'Bearer {self.token}'},
                                     json={'name': 'Измененное имя'})
 
         self.assertEqual(response.status_code, 404)
@@ -227,18 +253,83 @@ class TestUpdateEvent(DBProcessedIsolatedAsyncTestCase):
         self.assertIsNone(event)
 
 
+class TestChangeEventActivity(DBProcessedIsolatedAsyncTestCase):
+    test_endpoint = True
+
+    async def asyncSetUp(self) -> None:
+        await super().asyncSetUp()
+        self.token = AuthJWT().create_access_token(subject=404, user_claims={'is_government_worker': True})
+        self.gov_structure_uuid = uuid_pkg.uuid4()
+        self.event_uuid = uuid_pkg.uuid4()
+        async with self.Session() as session, session.begin():
+            await session.execute(insert(GovStructure).values(uuid=self.gov_structure_uuid, name='gov structure',
+                                                              email='example@gmail.com'))
+            await session.execute(insert(Event).values(uuid=self.event_uuid, name='event',
+                                                       gov_structure_uuid=self.gov_structure_uuid,
+                                                       datetime=datetime.datetime(year=2020, month=1, day=1)))
+
+    async def test_change_false_to_true(self) -> None:
+        async with self.Session() as session, session.begin():
+            await session.execute(update(Event).values(is_active=False).where(Event.uuid == self.event_uuid))
+
+        with patch('src.events.router.EmailNotificationsSender.apply_async') as mock, TestClient(app=app) as client:
+            response = client.post(f'/events/{self.event_uuid}/activity-change/',
+                                   headers={'Authorization': f'Bearer {self.token}'},
+                                   json={'is_active': True})
+
+        self.assertIn('HostingEventEmailMessage', mock.call_args_list[0].kwargs['args'])
+        self.assertEqual(response.status_code, 204)
+
+        async with self.Session() as session:
+            event_activity = (await session.scalar(select(Event).where(Event.uuid == self.event_uuid))).is_active
+        self.assertTrue(event_activity)
+
+    async def test_change_true_to_false(self) -> None:
+        with patch('src.events.router.EmailNotificationsSender.apply_async') as mock, TestClient(app=app) as client:
+            response = client.post(f'/events/{self.event_uuid}/activity-change/',
+                                   headers={'Authorization': f'Bearer {self.token}'},
+                                   json={'is_active': False})
+
+        self.assertIn('EventCanceledEmailMessage', mock.call_args_list[0].kwargs['args'])
+        self.assertEqual(response.status_code, 204)
+
+        async with self.Session() as session:
+            event_activity = (await session.scalar(select(Event).where(Event.uuid == self.event_uuid))).is_active
+        self.assertFalse(event_activity)
+
+    async def test_activity_does_not_change(self) -> None:
+        with TestClient(app=app) as client:
+            response = client.post(f'/events/{self.event_uuid}/activity-change/',
+                                   headers={'Authorization': f'Bearer {self.token}'},
+                                   json={'is_active': True})
+
+        self.assertEqual(response.status_code, 204)
+
+        async with self.Session() as session:
+            event_activity = (await session.scalar(select(Event).where(Event.uuid == self.event_uuid))).is_active
+        self.assertTrue(event_activity)
+
+    async def test_event_does_not_exist(self) -> None:
+        with TestClient(app=app) as client:
+            response = client.post(f'/events/{uuid_pkg.uuid4()}/activity-change/',
+                                   headers={'Authorization': f'Bearer {self.token}'},
+                                   json={'is_active': False})
+
+        self.assertEqual(response.status_code, 404)
+
+
 class TestDeleteEvent(DBProcessedIsolatedAsyncTestCase):
     test_endpoint = True
 
     async def test_successful_deleting(self) -> None:
         gov_structure_uuid = uuid_pkg.uuid4()
         event_uuid = uuid_pkg.uuid4()
-        datetime_ = datetime.datetime(year=2020, month=1, day=1)
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure',
+                                                              email='example@gmail.com'))
             await session.execute(insert(Event).values(uuid=event_uuid, name='event',
                                                        gov_structure_uuid=gov_structure_uuid,
-                                                       datetime=datetime_))
+                                                       datetime=datetime.datetime(year=2020, month=1, day=1)))
 
         token = AuthJWT().create_access_token(subject=450, user_claims={'is_government_worker': True})
         with TestClient(app=app) as client:
@@ -270,13 +361,13 @@ class TestSubscribeToEvent(DBProcessedIsolatedAsyncTestCase):
         await super().asyncSetUp()
         self.gov_structure_uuid = uuid_pkg.uuid4()
         self.event_uuid = uuid_pkg.uuid4()
-        self.datetime_ = datetime.datetime(year=2020, month=1, day=1)
         self.user_id = 550
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=self.gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=self.gov_structure_uuid, name='gov structure',
+                                                              email='example@gmail.com'))
             await session.execute(insert(Event).values(uuid=self.event_uuid, name='event',
                                                        gov_structure_uuid=self.gov_structure_uuid,
-                                                       datetime=self.datetime_))
+                                                       datetime=datetime.datetime(year=2020, month=1, day=1)))
             await session.execute(insert(User).values({'id': self.user_id, 'first_name': 'Имя', 'last_name': 'Фамилия',
                                                        'patronymic': 'Отчество', 'email': 'email@email.com',
                                                        'password': 'Password123'}))
@@ -347,13 +438,13 @@ class TestUnsubscribeFromEvent(DBProcessedIsolatedAsyncTestCase):
     async def test_successful_deleting(self) -> None:
         gov_structure_uuid = uuid_pkg.uuid4()
         event_uuid = uuid_pkg.uuid4()
-        datetime_ = datetime.datetime(year=2020, month=1, day=1)
         user_id = 600
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure',
+                                                              email='example@gmail.com'))
             await session.execute(insert(Event).values(uuid=event_uuid, name='event',
                                                        gov_structure_uuid=gov_structure_uuid,
-                                                       datetime=datetime_))
+                                                       datetime=datetime.datetime(year=2020, month=1, day=1)))
             await session.execute(insert(User).values({'id': user_id, 'first_name': 'Имя', 'last_name': 'Фамилия',
                                                        'patronymic': 'Отчество', 'email': 'email@email.com',
                                                        'password': 'Password123'}))
@@ -391,14 +482,14 @@ class TestReceiveSubscribersToEvent(DBProcessedIsolatedAsyncTestCase):
     async def test_successful_receiving(self) -> None:
         gov_structure_uuid = uuid_pkg.uuid4()
         event_uuid = uuid_pkg.uuid4()
-        datetime_ = datetime.datetime(year=2020, month=1, day=1)
         user1_id = 700
         user2_id = 750
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure',
+                                                              email='example@gmail.com'))
             await session.execute(insert(Event).values(uuid=event_uuid, name='event',
                                                        gov_structure_uuid=gov_structure_uuid,
-                                                       datetime=datetime_))
+                                                       datetime=datetime.datetime(year=2020, month=1, day=1)))
             await session.execute(insert(User).values({'id': user1_id, 'first_name': 'Имя', 'last_name': 'Фамилия',
                                                        'patronymic': 'Отчество', 'email': 'email@email.com',
                                                        'password': 'Password123'}))

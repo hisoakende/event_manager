@@ -2,8 +2,7 @@ import uuid as uuid_pkg
 from typing import Annotated
 
 from asyncpg import UniqueViolationError, ForeignKeyViolationError
-from fastapi import APIRouter, Depends, HTTPException, status, Body
-from starlette.background import BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Body, BackgroundTasks
 
 from src.dependencies import authorize_user
 from src.gov_structures.email_messages import ConfirmGovStructureEmailEmailMessage

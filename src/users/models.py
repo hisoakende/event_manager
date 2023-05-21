@@ -13,13 +13,18 @@ class UserBase(SQLModel):
     first_name: str
     last_name: str
     patronymic: str
-    email: EmailStr = Field(unique=True)
 
 
 class UserBaseWithPassword(UserBase):
     """The model that represents basic user structure fields and the password field"""
 
     password: str
+
+
+class UserBaseWithEmail(UserBase):
+    """The model that represents basic user structure fields and the email field"""
+
+    email: EmailStr = Field(unique=True)
 
 
 class UserValidator(SQLModel):
@@ -41,14 +46,15 @@ class UserValidator(SQLModel):
         return f'{salt}${hashed_password}'
 
 
-class User(UserBaseWithPassword, table=True):
+class User(UserBaseWithEmail, UserBaseWithPassword, table=True):
     """The model that represents an ordinary citizen or a government worker in the database"""
 
     id: int | None = Field(default=None, primary_key=True)
     is_government_worker: bool = False
+    email: EmailStr = Field(unique=True)
 
 
-class UserCreate(UserBaseWithPassword, UserValidator):
+class UserCreate(UserBaseWithEmail, UserBaseWithPassword, UserValidator):
     """
     The model that represents the fields needed to create the user and processes its
 
@@ -58,7 +64,7 @@ class UserCreate(UserBaseWithPassword, UserValidator):
     government_key: str | None = None
 
 
-class UserRead(UserBase):
+class UserRead(UserBaseWithEmail):
     """The model that represents the fields which will be returned by API"""
 
     is_government_worker: bool

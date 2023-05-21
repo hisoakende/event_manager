@@ -58,14 +58,7 @@ async def receive_user(user_id: AuthorizeUserDep) -> UserRead:
 async def update_user(user_changes: UserUpdate, user_id: AuthorizeUserDep) -> UserRead:
     """The view that processes updating the user"""
 
-    try:
-        await update_models(User, user_changes, User.id == user_id)  # type: ignore
-    except UniqueViolationError:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail=[{'loc': ['body', 'email'],
-                                     'msg': 'this email is already in use',
-                                     'type': 'value_error'}])
-
+    await update_models(User, user_changes, User.id == user_id)  # type: ignore
     return UserRead.from_orm(await receive_model(User, User.id == user_id))  # type: ignore
 
 
@@ -93,8 +86,8 @@ async def confirm_email(confirmation_uuid: Annotated[uuid_pkg.UUID, Body(embed=T
         await create_model(user)
     except UniqueViolationError:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail=[{'loc': ['body', 'confirmation_uuid'],
-                                     'msg': 'invalid value',
+                            detail=[{'loc': ['body', 'email'],
+                                     'msg': 'this email is already in use',
                                      'type': 'value_error'}])
     return UserRead.from_orm(user)
 

@@ -20,7 +20,8 @@ class TestDoesUserIsSubToEventBySubToGovStructure(DBProcessedIsolatedAsyncTestCa
         self.datetime_ = datetime.datetime(year=2020, month=1, day=1)
         self.user_id = 1110
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=self.gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=self.gov_structure_uuid, name='gov structure',
+                                                              email='example@gmail.com'))
             await session.execute(insert(Event).values(uuid=self.event_uuid, name='event',
                                                        gov_structure_uuid=self.gov_structure_uuid,
                                                        datetime=self.datetime_))
@@ -70,7 +71,8 @@ class TestReceiveSubsToEventFromDb(DBProcessedIsolatedAsyncTestCase):
             session.add(user2)
 
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure',
+                                                              email='example@gmail.com'))
             await session.execute(insert(Event).values(uuid=event_uuid, name='event',
                                                        gov_structure_uuid=gov_structure_uuid,
                                                        datetime=datetime_))
@@ -79,6 +81,6 @@ class TestReceiveSubsToEventFromDb(DBProcessedIsolatedAsyncTestCase):
             await session.execute(insert(EventSubscription).values(event_uuid=event_uuid,
                                                                    user_id=user2_id))
 
-        expected_result = [user2, user1]
+        expected_result = [user1, user2]
         result = await receive_subs_to_event_from_db(event_uuid, gov_structure_uuid, UsersSFP(page=0, size=100))
         self.assertEqual(result, expected_result)

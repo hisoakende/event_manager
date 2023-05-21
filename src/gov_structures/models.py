@@ -13,11 +13,16 @@ class GovStructureBase(SQLModel):
 
     name: str
     description: str | None = Field(sa_column=Column(TEXT), default=None)
-    email: EmailStr
     address: str | None = None
 
 
-class GovStructure(GovStructureBase, table=True):
+class GovStructureBaseWithEmail(GovStructureBase):
+    """The model that represents basic government structure fields and the email field"""
+
+    email: EmailStr
+
+
+class GovStructure(GovStructureBaseWithEmail, table=True):
     """
     The model that represents the government structure in the database,
     such as the Ministry of Emergency Situations or the Ministry of Education
@@ -26,7 +31,7 @@ class GovStructure(GovStructureBase, table=True):
     uuid: uuid_pkg.UUID = Field(default_factory=uuid_pkg.uuid4, primary_key=True)
 
 
-class GovStructureCreate(GovStructureBase):
+class GovStructureCreate(GovStructureBaseWithEmail):
     """The model that represents the fields needed to create the government structure"""
 
 

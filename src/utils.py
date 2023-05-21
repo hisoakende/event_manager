@@ -22,7 +22,7 @@ class ChangesAreNotEmptyMixin(SQLModel):
         This is necessary for the correct update of the data
         """
 
-        if not values:
+        if all(field not in cls.schema_json() for field in values):
             raise ValueError('you must specify at least one field')
         return values
 

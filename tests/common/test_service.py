@@ -1,9 +1,16 @@
+import json
+import uuid as uuid_pkg
+
+from unittest import TestCase
+
 from asyncpg import UniqueViolationError
 from sqlalchemy import insert, select, text
+from sqlmodel import SQLModel
 
+from src.events.models import Event
 from src.redis_ import redis_engine
 from src.service import execute_db_query, create_model, receive_model, update_models, delete_models, \
-    is_user_in_blacklist
+    is_user_in_blacklist, set_unconfirmed_email_data, receive_unconfirmed_email_data, delete_unconfirmed_email_data
 from src.users.models import User, UserUpdate
 from tests import config
 from tests.service import DBProcessedIsolatedAsyncTestCase
@@ -62,7 +69,7 @@ class TestReceiveModel(DBProcessedIsolatedAsyncTestCase):
 
 class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
 
-    async def test_successful_updating(self) -> None:
+    async def test_updating(self) -> None:
         async with self.Session() as session, session.begin():
             await session.execute(insert(User).values(id=5000, first_name='Имя', last_name='Фамилия',
                                                       patronymic='Отчество', email='example@example3.com',
@@ -76,23 +83,6 @@ class TestUpdatingModel(DBProcessedIsolatedAsyncTestCase):
         async with self.Session() as session:
             name = (await session.scalar(select(User).where(User.id == 5000))).first_name
         self.assertEqual(name, expected_name)
-
-    async def test_failed_updating(self) -> None:
-        async with self.Session() as session, session.begin():
-            await session.execute(insert(User).values(id=5000, first_name='Имя', last_name='Фамилия',
-                                                      patronymic='Отчество', email='example@example3.com',
-                                                      password='Example123'))
-            await session.execute(insert(User).values(id=6000, first_name='Имя', last_name='Фамилия',
-                                                      patronymic='Отчество', email='example@example4.com',
-                                                      password='Example123'))
-
-        with self.assertRaises(UniqueViolationError):
-            await update_models(User, UserUpdate(email='example@example3.com'), User.id == 6000)  # type: ignore
-
-        expected_email = 'example@example4.com'
-        async with self.Session() as session:
-            email = (await session.scalar(select(User).where(User.id == 6000))).email
-        self.assertEqual(email, expected_email)
 
 
 class TestDeleteModel(DBProcessedIsolatedAsyncTestCase):
@@ -128,3 +118,52 @@ class TestIsUserInBlacklist(DBProcessedIsolatedAsyncTestCase):
         expected_result = False
         result = is_user_in_blacklist(9000)
         self.assertEqual(result, expected_result)
+
+
+class TestSetUnconfirmedEmailData(TestCase):
+
+    def test_setting(self) -> None:
+        confirmation_uuid = uuid_pkg.uuid4()
+        user = User(first_name='Имя', last_name='Фамилия', patronymic='Отчество',
+                    email='example@example1.com', password='Example123')
+
+        set_unconfirmed_email_data(confirmation_uuid, user)  # type: ignore
+        expected_result = user.json()
+        result = redis_engine.get(f'{confirmation_uuid}-User')
+        self.assertEqual(result, expected_result)
+
+        redis_engine.delete(f'{confirmation_uuid}-User')
+
+
+class TestReceiveUnconfirmedEmailData(TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.confirmation_uuid = uuid_pkg.uuid4()
+        cls.user = User(first_name='Имя', last_name='Фамилия', patronymic='Отчество',
+                        email='example@example1.com', password='Example123')
+
+    def test_data_is_not_None(self) -> None:
+        redis_engine.set(f'{self.confirmation_uuid}-User', self.user.json())
+
+        expected_result = self.user
+        result = receive_unconfirmed_email_data(self.confirmation_uuid, User)
+        self.assertEqual(result, expected_result)
+
+    def test_data_is_None(self) -> None:
+        result = receive_unconfirmed_email_data(uuid_pkg.uuid4(), User)
+        self.assertIsNone(result)
+
+
+class TestDeleteUnconfirmedEmailData(TestCase):
+
+    def test_deleting(self) -> None:
+        confirmation_uuid = uuid_pkg.uuid4()
+        user = User(first_name='Имя', last_name='Фамилия', patronymic='Отчество',
+                    email='example@example1.com', password='Example123')
+        redis_engine.set(f'{confirmation_uuid}-User', user.json())
+
+        delete_unconfirmed_email_data(confirmation_uuid, User)
+
+        result = redis_engine.get(f'{confirmation_uuid}-User')
+        self.assertIsNone(result)

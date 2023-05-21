@@ -52,9 +52,9 @@ class EmailNotificationsSender(Task):
 
         else:
             self.event = loop.run_until_complete(receive_model(Event, Event.uuid == event))  # type: ignore
-            if any(((datetime_ and self.event.datetime != datetime.fromisoformat(datetime_),
-                     self.event is None,
-                     not self.event.is_active))):
+            if (datetime_ and self.event.datetime != datetime.fromisoformat(datetime_)) \
+                    or self.event is None \
+                    or not self.event.is_active:
                 return
 
         message_class = EventNotificationEmailMessage.messages_classes[message_class_name]

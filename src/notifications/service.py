@@ -20,7 +20,7 @@ async def receive_events_that_in_few_days_time(day_count: int, datetime_: dateti
     return (await execute_db_query(query)).scalars().fetchall()
 
 
-async def receive_events_for_today_and_tomorrow(datetime_: datetime.datetime) -> list[Event]:
+async def receive_events_for_this_and_next_day(datetime_: datetime.datetime) -> list[Event]:
     """The function that returns the events that will occur on the given day and the next"""
 
     edge = (datetime_ + datetime.timedelta(days=2)).replace(hour=0, minute=0)

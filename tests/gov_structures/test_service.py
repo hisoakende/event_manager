@@ -24,7 +24,8 @@ class TestReceiveSubsToGovStructureFromDb(DBProcessedIsolatedAsyncTestCase):
             session.add(user2)
 
         async with self.Session() as session, session.begin():
-            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure'))
+            await session.execute(insert(GovStructure).values(uuid=gov_structure_uuid, name='gov structure',
+                                                              email='example@email.com'))
             await session.execute(insert(GovStructureSubscription).values(gov_structure_uuid=gov_structure_uuid,
                                                                           user_id=user1_id))
             await session.execute(insert(GovStructureSubscription).values(gov_structure_uuid=gov_structure_uuid,
